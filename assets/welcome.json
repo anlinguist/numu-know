@@ -1,0 +1,256 @@
+{
+    "data": [
+        {
+            "words": [
+                {
+                    "variant-Burns": "Hau",
+                    "morphology": "haoo",
+                    "word": "Haoo",
+                    "gloss": "how",
+                    "variant-Modified IPA": "Hau"
+                },
+                {
+                    "morphology": "mu",
+                    "variant-Burns": "me",
+                    "word": "mu",
+                    "variant-Modified IPA": "m�",
+                    "Note": "PL = Plural. This is the plural form of the pronoun \"you.\"",
+                    "gloss": "you.PL"
+                },
+                {
+                    "punctuation": "!"
+                },
+                {
+                    "gloss": "I",
+                    "morphology": "nu",
+                    "word": "Nu",
+                    "variant-Burns": "Ne",
+                    "variant-Modified IPA": "N�"
+                },
+                {
+                    "word": "Josh",
+                    "variant-Burns": "Josh",
+                    "gloss": "Josh",
+                    "variant-Modified IPA": "Josh",
+                    "morphology": "Josh"
+                },
+                {
+                    "gloss": "QTE",
+                    "variant-Modified IPA": "mi",
+                    "Note": "QTE = Quotative. This quotative particle can be likened to a spoken quotation mark. It precedes and/or follows direct or indirect speech. It is often accompanied by another verb of speaking, and it can occur alone. In this case, it precedes the verb \"nea\" which means \"call.\"",
+                    "variant-Burns": "mi",
+                    "morphology": "me",
+                    "word": "me"
+                },
+                {
+                    "gloss": "MM-call",
+                    "morphology": "na-ne'a",
+                    "variant-Burns": "nani'a",
+                    "word": "nane'a",
+                    "variant-Modified IPA": "nani'a",
+                    "Note.": "Literally, the entire phrase means, \"I am called ____\"",
+                    "Note": "MM = Middle Marker. This prefix converts active verbs to passive. In this case, it converts \"call\" to \"called.\""
+                },
+                {
+                    "punctuation": "."
+                },
+                {
+                    "variant-Modified IPA": "N�",
+                    "gloss": "I",
+                    "morphology": "nu",
+                    "variant-Burns": "Ne",
+                    "word": "Nu"
+                },
+                {
+                    "word": "Agi",
+                    "morphology": "agi",
+                    "gloss": "trout",
+                    "variant-Burns": "Agai",
+                    "variant-Modified IPA": "Agai"
+                },
+                {
+                    "word": "Tukadu",
+                    "Note": "NMLZ = Nominalizer. This suffix converts verbs (action words) to nouns. It is similar to the English suffix -er. Hence, \"eat\" becomes \"eater.\"",
+                    "gloss": "eat-NMLZ",
+                    "morphology": "tuka-du",
+                    "variant-Burns": "Tekade",
+                    "variant-Modified IPA": "T�kad�"
+                },
+                {
+                    "punctuation": "."
+                }
+            ],
+            "translation": "How are you all! My name is Josh. I am Trout Eater (Walker River Paiute)."
+        },
+        {
+            "words": [
+                {
+                    "gloss": "my",
+                    "variant-Burns": "I",
+                    "word": "E",
+                    "variant-Modified IPA": "I",
+                    "morphology": "e"
+                },
+                {
+                    "morphology": "naa'a-gapu",
+                    "variant-Burns": "naa'a-gape",
+                    "gloss": "father-passed",
+                    "variant-Modified IPA": "naa'a-gap�",
+                    "word": "naa'a-gapu",
+                    "Note": "Gapu is used to refer to someone who has passed away."
+                },
+                {
+                    "gloss": "Mexico-LOC-at",
+                    "variant-Modified IPA": "Mexico-weit�",
+                    "word": "Mexico-waetu",
+                    "morphology": "Mexico-wae-tu",
+                    "Note": "LOC = Locative. This indicates a \"location\" or \"area.\" In some contexts, it can also mean \"in.\"",
+                    "variant-Burns": "Mexico-waite"
+                },
+                {
+                    "morphology": "kemmadu",
+                    "variant-Burns": "kimmade",
+                    "gloss": "come-NMLZ",
+                    "variant-Modified IPA": "kimmad�",
+                    "Note": "Once again, the NMLZ converts verbs into nouns. Here, the verb \"come\" becomes a noun, referring to \"one who comes.\"",
+                    "word": "kemmadu"
+                },
+                {
+                    "punctuation": "."
+                }
+            ],
+            "translation": "My late father comes from Mexico."
+        },
+        {
+            "translation": "My late mother was Trout Eater Paiute and Assiniboine.",
+            "words": [
+                {
+                    "gloss": "my",
+                    "variant-Modified IPA": "I",
+                    "word": "E",
+                    "morphology": "e",
+                    "variant-Burns": "I"
+                },
+                {
+                    "morphology": "pea-gapu",
+                    "variant-Modified IPA": "pia-gap�",
+                    "variant-Burns": "pia-gape",
+                    "gloss": "mother-passed",
+                    "word": "pea-gapu"
+                },
+                {
+                    "variant-Burns": "Agai",
+                    "gloss": "trout",
+                    "variant-Modified IPA": "Agai",
+                    "morphology": "agi",
+                    "word": "Agi"
+                },
+                {
+                    "variant-Modified IPA": "T�kad�-no",
+                    "gloss": "eat-NMLZ-and",
+                    "morphology": "tuka-du-no",
+                    "variant-Burns": "Tekade-no",
+                    "word": "Tukadu-no"
+                },
+                {
+                    "variant-Modified IPA": "Assiniboine",
+                    "gloss": "Assiniboine-and",
+                    "morphology": "Assiniboine-no",
+                    "word": "Assiniboine-no",
+                    "variant-Burns": "Assiniboine"
+                },
+                {
+                    "punctuation": "."
+                }
+            ]
+        },
+        {
+            "words": [
+                {
+                    "morphology": "e",
+                    "word": "E",
+                    "variant-Burns": "I",
+                    "gloss": "my",
+                    "variant-Modified IPA": "I"
+                },
+                {
+                    "gloss": "great-grandparent",
+                    "variant-Burns": "hebi'i",
+                    "morphology": "hube'e",
+                    "variant-Modified IPA": "h�bi'i",
+                    "word": "hube'e"
+                },
+                {
+                    "word": "Beetsupodu",
+                    "morphology": "Beetsupodu",
+                    "variant-Modified IPA": "Biits�pod�",
+                    "gloss": "Bridgeport",
+                    "variant-Burns": "Biitsepode"
+                },
+                {
+                    "variant-Burns": "kimmade",
+                    "variant-Modified IPA": "kemmad�",
+                    "word": "kemmadu",
+                    "gloss": "come-NMLZ",
+                    "morphology": "kemmadu"
+                },
+                {
+                    "punctuation": "."
+                }
+            ],
+            "translation": "My great-grandmother comes from Bridgeport (Mono Lake Paiute)."
+        },
+        {
+            "translation": "I am an advocate of our people's language.",
+            "words": [
+                {
+                    "variant-Burns": "Ne",
+                    "morphology": "nu",
+                    "word": "Nu",
+                    "gloss": "I",
+                    "variant-Modified IPA": "N�"
+                },
+                {
+                    "word": "yaoo",
+                    "variant-Modified IPA": "yau",
+                    "variant-Burns": "yau",
+                    "morphology": "yaoo",
+                    "gloss": "here"
+                },
+                {
+                    "morphology": "te",
+                    "variant-Modified IPA": "ti",
+                    "word": "te",
+                    "gloss": "our",
+                    "variant-Burns": "ti"
+                },
+                {
+                    "variant-Modified IPA": "N�m�",
+                    "gloss": "people",
+                    "word": "Numu",
+                    "variant-Burns": "Neme",
+                    "morphology": "numu"
+                },
+                {
+                    "word": "abegana",
+                    "variant-Modified IPA": "apigana",
+                    "variant-Burns": "apigana",
+                    "morphology": "abega-na",
+                    "gloss": "speak.PL-NMLZ",
+                    "Note": "This is the plural form of the verb \"speak.\" By adding the nominalizing suffix -na, this word can be translated as the noun \"language.\" Another way to refer to the Paiute language is Numu Yadooana."
+                },
+                {
+                    "morphology": "tuapa-wabe",
+                    "gloss": "voice-HAB.doer",
+                    "word": "tuapawabe",
+                    "Note": "HAB = Habitual. This suffix -wabe/wabi is often used to refer to someone who habitually does something. It can refer to someone who is occupationally involved in a particular task. For example, a Yadooawabe (speak + -wabe) refers to an Interpreter.",
+                    "variant-Modified IPA": "t�apawabi",
+                    "variant-Burns": "teapawabe"
+                },
+                {
+                    "punctuation": "."
+                }
+            ]
+        }
+    ]
+}
