@@ -1,0 +1,131 @@
+.welcomedocumentpage {
+    padding: 30px;
+    /* overflow: scroll;  <-- checking if this is needed with Mantine defaults, likely container handles it or we use ScrollArea if needed */
+    /* overflow-x: hidden; */
+}
+
+.welcome {
+    text-align: center;
+    font-size: 32px;
+    margin-bottom: 20px;
+    text-decoration: underline;
+    color: var(--mantine-color-text);
+}
+
+.welcomeBlock {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-content: center;
+    align-items: flex-start;
+    /* Align to top for better text/image pairing */
+    gap: 40px;
+    /* Add gap between image and text */
+}
+
+.welcomeBlockImg {
+    width: 100%;
+    max-width: 450px;
+    height: auto;
+    border-radius: 8px;
+    flex: 0 0 auto;
+    /* Prevent image from shrinking/growing unexpectedly */
+}
+
+.welcomeBlockTxt {
+    margin: 20px 0;
+    /* Remove horizontal margin since we use gap */
+    max-width: 100%;
+    flex: 1 1 300px;
+    /* grow, shrink, basis 300px - allows wrapping if narrower */
+    min-width: 250px;
+    /* Ensure check for very small screens */
+}
+
+.informational {
+    padding: 10px;
+    margin: 5px 0;
+    font-size: 22px;
+    text-align: center;
+    color: var(--mantine-color-text);
+}
+
+.storyline {
+    margin: 10px 0;
+}
+
+/* Add top border if preceded by informational or storyline - ported from globals */
+.informational+.storyline,
+.storyline+.informational {
+    margin-top: 25px;
+    border-top: 1px solid var(--mantine-color-dimmed);
+    /* using mantine var for safety */
+    padding-top: 25px;
+}
+
+.storyOriginal {
+    font-size: 22px;
+}
+
+.storyTranslation {
+    font-size: 18px;
+    margin-left: 20px;
+    font-style: italic;
+    color: var(--mantine-color-dimmed);
+}
+
+.storyword {
+    margin-left: 3px;
+    cursor: pointer;
+    border-radius: 2px;
+    display: inline-block;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    color: var(--mantine-color-text);
+}
+
+.storyword:first-child {
+    margin-left: unset;
+}
+
+.wordatt {
+    font-weight: 700;
+    text-transform: capitalize;
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+    margin-bottom: 2px;
+    display: block;
+}
+
+.wordattandval {
+    margin: 0 0 16px 0;
+    line-height: 1.7;
+    font-size: 0.925rem;
+}
+
+.wordattandval:last-child {
+    margin-bottom: 0;
+}
+
+.divider {
+    margin: 40px 15%;
+    border: 0;
+    border-top: 1px solid var(--mantine-color-gray-4);
+}
+
+.welcomeabout {
+    margin: 0 10%;
+}
+
+.welcomeabout div {
+    /* Changed from p since parse returns divs often or we wrap in div */
+    font-size: 18px;
+    margin: 10px 0;
+}
+
+.designedby {
+    text-align: center;
+    font-size: 12px;
+    margin-bottom: 20px;
+    color: var(--mantine-color-dimmed);
+}

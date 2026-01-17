@@ -1,0 +1,116 @@
+/* Layout */
+.searchContent {
+    position: relative;
+    padding: 0;
+}
+
+.searchBoxContainer {
+    max-width: 600px;
+    margin: 0 auto 20px auto;
+}
+
+.resultsContainerWrapper {
+    position: relative;
+    min-height: 200px;
+}
+
+.searchLoaderOverlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    min-height: 200px;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 10;
+}
+
+/* Dark mode override for loader overlay */
+@media (prefers-color-scheme: dark) {
+    .searchLoaderOverlay {
+        background-color: rgba(0, 0, 0, 0.6);
+    }
+}
+
+/* Tooltip / Word Attributes */
+.wordAttContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wordAttLabel {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: var(--mantine-color-dimmed);
+}
+
+/* Search Results Card */
+.docCard {
+    margin-bottom: 1rem;
+}
+
+.resultHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.resultTitle {
+    margin: 0;
+}
+
+.resultLink {
+    text-decoration: none;
+    color: inherit;
+}
+
+.resultBlock {
+    margin-bottom: 8px;
+}
+
+.glossRow {
+    margin-bottom: 4px;
+}
+
+.storyOriginal {
+    flex-grow: 1;
+}
+
+/* Legacy / Story Styles (ported for consistency) */
+.storyWord {
+    margin-left: 3px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    padding: 0 2px;
+}
+
+.storyWord:first-child {
+    margin-left: 0;
+}
+
+.highlighted {
+    background-color: var(--mantine-color-yellow-3);
+    color: var(--mantine-color-black);
+}
+
+@media (prefers-color-scheme: dark) {
+    .highlighted {
+        background-color: #E8EC6F;
+        color: black;
+    }
+}
+
+.punctuation {
+    margin-left: 1px;
+}
+
+.punctuationFirst {
+    margin-left: 0;
+    margin-right: 1px;
+}

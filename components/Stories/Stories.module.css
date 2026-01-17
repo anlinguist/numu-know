@@ -1,0 +1,276 @@
+.documentPage {
+    height: calc(100vh - 84px);
+    /* app shell header height */
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.docViewer {
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    height: 100%;
+    width: 100%;
+    flex-grow: 1;
+    /* Take remaining space */
+    overflow: hidden;
+    /* Ensure inner scrolls work */
+}
+
+.audioFooter {
+    width: 100%;
+    background-color: var(--mantine-color-body);
+    border-top: 1px solid var(--mantine-color-gray-3);
+    z-index: 50;
+    /* Ensure on top */
+}
+
+.backToDocs {
+    display: none;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+    font-size: 2rem;
+    cursor: pointer;
+    color: var(--mantine-color-text);
+}
+
+.documentLoader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 10;
+}
+
+/* DocsList Styles */
+.documentSearchContainer {
+    width: 350px;
+    min-width: 300px;
+    border-right: 1px solid var(--mantine-color-gray-3);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: var(--mantine-color-body);
+}
+
+.searchHeader {
+    border-bottom: 1px solid var(--mantine-color-gray-3);
+}
+
+.documentsContainer {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.documentsList {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.indDoc {
+    text-align: left;
+    padding: 10px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    font-size: 1rem;
+    color: var(--mantine-color-text);
+}
+
+.indDoc:hover {
+    background-color: var(--mantine-color-gray-1);
+}
+
+.selectedDoc {
+    background-color: var(--mantine-color-gray-2);
+    font-weight: 600;
+}
+
+.draftLabel {
+    font-size: 0.8em;
+    color: var(--mantine-color-dimmed);
+    margin-left: 8px;
+}
+
+/* ChosenDoc Styles */
+.chosenDoc {
+    flex-grow: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    background-color: var(--mantine-color-body);
+}
+
+.documentContent {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    padding: 40px;
+}
+
+.docTitle {
+    text-align: center;
+}
+
+.docNotFound {
+    text-align: center;
+    margin-top: 2rem;
+    color: var(--mantine-color-dimmed);
+}
+
+/* Story Content Styles */
+.informational {
+    font-size: 1.1rem;
+    /* Let Alert handle padding/colors */
+}
+
+.storyLine {
+    margin: 10px 0;
+}
+
+.storyOriginal {
+    font-size: 1.375rem;
+    line-height: 1.6;
+}
+
+.storyTranslation {
+    font-size: 1.125rem;
+    margin-left: 20px;
+    font-style: italic;
+    color: var(--mantine-color-dimmed);
+    margin-top: 4px;
+    padding-left: 10px;
+    border-left: 2px solid var(--mantine-color-gray-3);
+}
+
+.informational+.storyLine,
+.storyLine+.informational {
+    margin-top: 25px;
+    border-top: 1px solid var(--mantine-color-gray-3);
+    padding-top: 25px;
+}
+
+.storyWord {
+    margin-left: 3px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: inline-block;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    padding: 0 2px;
+}
+
+.storyWord:first-child {
+    margin-left: unset;
+}
+
+.openingQuote {
+    /* Marker class for sibling selection */
+    display: inline;
+}
+
+.openingQuote+.storyWord {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+}
+
+.hoveredWord {
+    text-align: center;
+    font-weight: bold;
+}
+
+.storyWordOpen {
+    background-color: var(--mantine-color-gray-5);
+    color: var(--mantine-color-white);
+}
+
+.storyWordHighlighted {
+    background-color: var(--mantine-color-yellow-3);
+    color: var(--mantine-color-black);
+}
+
+/* Word Attribute Popup Styles */
+.wordAtt {
+    font-weight: 700;
+    text-transform: capitalize;
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+    margin-bottom: 2px;
+    display: block;
+    color: var(--mantine-color-dimmed);
+}
+
+.wordAttAndVal {
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+    font-size: 0.925rem;
+}
+
+.wordAttAndVal span:not(.wordAtt) {
+    color: var(--mantine-color-text);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .documentSearchContainer {
+        width: 100%;
+        display: flex;
+        /* Fix scrolling by maintaining flex layout */
+    }
+
+    .chosenDoc {
+        display: none;
+    }
+
+    /* Logic for showing/hiding based on state */
+    .hiddenOnMobile {
+        display: none !important;
+    }
+
+    .visibleOnMobile {
+        display: flex !important;
+    }
+
+    .backToDocs {
+        display: block;
+    }
+}
+
+/* Dark Mode Overrides (Mantine handles mostly via vars, but specific checks) */
+@media (prefers-color-scheme: dark) {
+    .indDoc:hover {
+        background-color: var(--mantine-color-dark-6);
+    }
+
+    .documentLoader {
+        background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    .documentSearchContainer {
+        border-right: 1px solid var(--mantine-color-dark-4);
+    }
+
+    .searchHeader {
+        border-bottom: 1px solid var(--mantine-color-dark-4);
+    }
+
+    .selectedDoc {
+        background-color: var(--mantine-color-dark-5);
+    }
+
+    .storyWordHighlighted {
+        color: black;
+        background-color: #E8EC6F;
+    }
+}

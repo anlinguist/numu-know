@@ -1,0 +1,10 @@
+.headerContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--mantine-color-body);
+}
