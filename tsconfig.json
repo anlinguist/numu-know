@@ -31,8 +31,7 @@
       "node",
       "react",
       "react-dom",
-      "react-modal-video",
-      "google.maps"
+      "react-modal-video"
     ]
   },
   "include": [
