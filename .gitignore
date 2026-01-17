@@ -40,3 +40,4 @@ next-env.d.ts
 !package.json
 !tsconfig.json
 !.eslintrc.json
+!assets/**/*.json
