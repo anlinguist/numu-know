@@ -1,4 +1,4 @@
-# Cloud Build configuration for Cloud Run deployment
+# Cloud Build configuration for Cloud Run deployment with Firebase secrets
 # Automatically deploys to different services based on branch:
 # - staging branch -> staging-numu-know
 # - main branch -> numu-know
