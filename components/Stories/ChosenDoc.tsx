@@ -567,7 +567,7 @@ function ChosenDoc({ isAdmin, user, highlights, docIsSelected, setHighlights, ge
                     docContent && docContent.length === 0 && docLoading === 'notloading' &&
                     <div>
                         <div className={classes.docTitle}>Uh-Oh!</div>
-                        <p className={classes.docNotFound}>We couldn't find that story.</p>
+                        <p className={classes.docNotFound}>We couldn&apos;t find that story.</p>
                     </div>
                 }
             </>
