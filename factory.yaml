@@ -16,6 +16,17 @@ parts:
     profile: web-app
     config:
       routes: ["/", "/dictionary", "/learn", "/store"]
+      # Production Firebase web config (public by design; it ships in the site's JavaScript). Temporary:
+      # agent sandboxes can't reach Firebase, but previews (P1-11) could, so P1-10 replaces these with a
+      # dev Firebase project's config before previews are enabled.
+      previewEnv:
+        NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyAcMEM3Ebs9Jq_G2u4SJ0W5UkCS8W-Djkc
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: numu-know.firebaseapp.com
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: numu-know
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: numu-know.appspot.com
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "842129533056"
+        NEXT_PUBLIC_FIREBASE_APP_ID: "1:842129533056:web:7a55b88bb5394a1e435e65"
+        NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: G-PQK8CG3MLF
     preview: { enabled: false }   # previews arrive with P1-08
 
 limits:
