@@ -1,0 +1,29 @@
+# factory.yaml: spec docs/FACTORY-YAML.md in anlinguist/globalhost; check with `globalhost validate`
+# yaml-language-server: $schema=https://raw.githubusercontent.com/anlinguist/globalhost/main/schemas/factory.schema.json
+version: 1
+product: numu-know
+owners:
+  - { login: anlinguist, id: 47403803 }
+autonomy: L1
+
+git:
+  defaultBranch: main
+  baseBranch: main
+
+parts:
+  web:
+    path: .
+    profile: web-app
+    config:
+      routes: ["/", "/dictionary", "/learn", "/store"]
+    preview: { enabled: false }   # previews arrive with P1-08
+
+limits:
+  maxConcurrentBuilders: 1
+  perRunUsd: 4
+  perRunMinutes: 45
+  dailyUsd: 20
+
+guardrails:
+  loadBearing: ["proxy.ts", "lib/firebase*", "cloudbuild.yaml", "Dockerfile"]
+  immutable: []
