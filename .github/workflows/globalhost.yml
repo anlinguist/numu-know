@@ -44,7 +44,7 @@ jobs:
       comment: ${{ steps.gate.outputs.comment }}
     steps:
       - id: gate
-        uses: anlinguist/globalhost/packages/action@ab640e8f56a13bf9fe3edeb2350f0a13e053d969 # globalhost main, 2026-10-30
+        uses: anlinguist/globalhost/packages/action@13d28e78e6275e26b928f88c54293cc55d9a700f # globalhost main, 2026-11-01
         with:
           step: gate
         env:
@@ -67,7 +67,7 @@ jobs:
         with:
           workload_identity_provider: ${{ vars.GLOBALHOST_WIF_PROVIDER }}
           service_account: ${{ vars.GLOBALHOST_DISPATCH_SA }}
-      - uses: anlinguist/globalhost/packages/action@ab640e8f56a13bf9fe3edeb2350f0a13e053d969 # globalhost main, 2026-10-30
+      - uses: anlinguist/globalhost/packages/action@13d28e78e6275e26b928f88c54293cc55d9a700f # globalhost main, 2026-11-01
         with:
           step: run
         env:

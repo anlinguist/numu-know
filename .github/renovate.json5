@@ -1,0 +1,18 @@
+// Renovate (factory install, PLAN P1-09). Grouped weekly PRs; never auto-merged: dependency changes
+// always reach the owner (ADR-0015 in anlinguist/globalhost).
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended", "helpers:pinGitHubActionDigests", ":disableDependencyDashboard"],
+  timezone: "America/Los_Angeles",
+  schedule: ["before 6am on monday"],
+  minimumReleaseAge: "7 days",
+  prConcurrentLimit: 3,
+  automerge: false,
+  labels: ["dependencies"],
+  vulnerabilityAlerts: { enabled: true, schedule: ["at any time"] },
+  packageRules: [
+    { matchUpdateTypes: ["minor", "patch"], matchCurrentVersion: "!/^0/", groupName: "non-major dependencies" },
+    { matchManagers: ["github-actions"], groupName: "GitHub Actions" },
+    { matchManagers: ["dockerfile"], groupName: "Docker base images" },
+  ],
+}

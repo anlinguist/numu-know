@@ -1,0 +1,3 @@
+# Firebase web API key in factory.yaml previewEnv: public by design (it ships in the site JavaScript); owner-approved 2026-10-30.
+# Replaced by the dev project config in P1-10. Add a fingerprint here only for a value that is public by design.
+d013aeb672213da62da0ead7d9be27d395728812:factory.yaml:gcp-api-key:23

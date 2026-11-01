@@ -1,0 +1,127 @@
+# globalhost CI (factory install, PLAN P1-09): the web-app profile's verify steps plus workflow and secret checks.
+# Added alongside the existing Cloud Build trigger, which still builds and deploys main. This workflow never
+# deploys and holds no secrets: the build uses factory.yaml's previewEnv (public web config only).
+name: globalhost-ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: globalhost-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Tool tarballs are pinned by SHA-256 (same pins as anlinguist/globalhost's CI).
+env:
+  ZIZMOR_URL: https://github.com/zizmorcore/zizmor/releases/download/v1.31.1/zizmor-x86_64-unknown-linux-gnu.tar.gz
+  ZIZMOR_SHA256: d185f726bdaf92df78273217dfdd24ebcd6b0ef48cf3ce776ff5762b6e138c99
+  ACTIONLINT_URL: https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+  ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+  GITLEAKS_URL: https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  verify:
+    name: verify (install, typecheck, lint, build, smoke)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No dependency cache: PR runs must not write caches that main-branch jobs restore.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 20 # matches the Dockerfile's node:20-alpine
+          package-manager-cache: false
+      - name: Load previewEnv and routes from factory.yaml
+        # Only NEXT_PUBLIC_* names with single-line values, and plain path routes, reach GITHUB_ENV.
+        run: |
+          routes="$(yq -r '.parts.web.config.routes // ["/"] | join(",")' factory.yaml)"
+          if ! [[ "$routes" =~ ^/[A-Za-z0-9/_,-]*$ ]]; then echo "::error::routes must be plain paths"; exit 1; fi
+          echo "GLOBALHOST_ROUTES=$routes" >> "$GITHUB_ENV"
+          yq -o=json '.parts.web.config.previewEnv // {}' factory.yaml \
+            | jq -r 'to_entries[] | "\(.key)=\(.value|tostring)"' > "$RUNNER_TEMP/preview.env"
+          if grep -Ev '^NEXT_PUBLIC_[A-Z0-9_]+=[^[:space:]]*$' "$RUNNER_TEMP/preview.env"; then
+            echo "::error::previewEnv may only hold NEXT_PUBLIC_* names with single-line values"; exit 1
+          fi
+          cat "$RUNNER_TEMP/preview.env" >> "$GITHUB_ENV"
+      - name: install
+        run: npm ci
+      - name: typecheck
+        run: if npm pkg get scripts.typecheck | grep -q '"'; then npm run typecheck; else npx --no-install tsc --noEmit; fi
+      - name: lint
+        run: npm run lint
+      - name: build
+        run: npm run build
+      - name: Install Chromium for the smoke test
+        run: npx --no-install playwright install --with-deps chromium
+      - name: smoke
+        env:
+          PORT: "3000"
+          GLOBALHOST_SCREENSHOT_DIR: screenshots
+        run: npx --no-install playwright test
+      - name: Upload smoke artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: smoke
+          path: |
+            playwright-report
+            test-results
+            screenshots
+          retention-days: 7
+          if-no-files-found: ignore
+
+  workflows:
+    name: workflow lint (zizmor, actionlint)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install workflow linters
+        run: |
+          .github/scripts/install-tool.sh "$ZIZMOR_URL" "$ZIZMOR_SHA256" zizmor
+          .github/scripts/install-tool.sh "$ACTIONLINT_URL" "$ACTIONLINT_SHA256" actionlint
+      - run: actionlint
+      - run: zizmor --offline .github/workflows
+
+  secrets:
+    name: secret scan (full history)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks
+        run: .github/scripts/install-tool.sh "$GITLEAKS_URL" "$GITLEAKS_SHA256" gitleaks
+      - name: Scan every reachable commit
+        run: gitleaks git --redact --no-banner --exit-code 1 .
+
+  # The one check the ruleset requires; it passes only if every job above passed.
+  globalhost-ci:
+    name: globalhost-ci
+    if: ${{ always() }}
+    needs: [verify, workflows, secrets]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for r in $RESULTS; do [ "$r" = success ] || exit 1; done
