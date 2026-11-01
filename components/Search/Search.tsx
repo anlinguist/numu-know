@@ -103,6 +103,7 @@ function Search(props: SearchProps) {
 
     useEffect(() => {
         if (props.opened && props.searchTerm) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- existing behaviour; follow-up: seed searchTerm from props when the modal opens instead of in an effect
             setSearchTerm(props.searchTerm)
             queryNumu(props.searchTerm);
         }

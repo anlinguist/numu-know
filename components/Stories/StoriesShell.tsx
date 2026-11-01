@@ -74,6 +74,7 @@ export default function StoriesShell({ children }: { children: React.ReactNode }
     }, [user]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- loadMetadata fetches from Firebase and sets state; follow-up: move the loading flag out of the synchronous effect path
         loadMetadata();
     }, [loadMetadata]);
 
