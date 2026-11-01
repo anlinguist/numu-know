@@ -9,7 +9,8 @@ const init = () => {
   if (app) return app;
 
   if (!getApps().length) {
-    const projectId = process.env.FIREBASE_PROJECT_ID || 'numu-know';
+    // Default to the project the build's web config names, so a dev or preview build never reaches production.
+    const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'numu-know';
 
     if (!projectId) {
       throw new Error('FIREBASE_PROJECT_ID environment variable is required');

@@ -1,0 +1,12 @@
+# gitleaks config (globalhost CI): the default rules, plus an allowlist for Firebase web API keys, which are public
+# by design (they ship in the site's JavaScript). Add a value here only if it is public by design.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public Firebase web API keys (prod: numu-know, dev: numu-know-dev)"
+regexTarget = "match"
+regexes = [
+  '''AIzaSyAcMEM3Ebs9Jq_G2u4SJ0W5UkCS8W-Djkc''',
+  '''AIzaSyCYwlIwoUS_r2mLjaH0qn-sl41ekgX0Jb4''',
+]
