@@ -44,6 +44,9 @@ export const metadata: Metadata = {
   },
 };
 
+// Production builds get the production Firebase project id (cloudbuild.yaml); dev, CI and preview builds don't.
+const isProduction = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === 'numu-know';
+
 export default async function RootLayout({
   children,
 }: {
@@ -57,19 +60,20 @@ export default async function RootLayout({
         <ColorSchemeScript defaultColorScheme="auto" />
         <meta name="color-scheme" content="light dark" />
 
-        <Script
+        {/* Analytics only in the production build: dev, CI and preview builds use the dev Firebase project. */}
+        {isProduction && <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-PQK8CG3MLF"
           strategy="afterInteractive"
           nonce={nonce}
-        />
-        <Script id="google-analytics" strategy="afterInteractive" nonce={nonce}>
+        />}
+        {isProduction && <Script id="google-analytics" strategy="afterInteractive" nonce={nonce}>
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-PQK8CG3MLF');
           `}
-        </Script>
+        </Script>}
       </head>
       <body>
         <NonceProvider nonce={nonce}>

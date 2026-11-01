@@ -28,6 +28,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Search query cannot be empty' }, { status: 400 });
     }
 
+    // Dev and preview environments have no Algolia keys: search returns no results there.
+    if (!process.env.ALGOLIA_APP_ID || !process.env.ALGOLIA_API_KEY) {
+      return NextResponse.json([]);
+    }
+
     const client = algoliasearch(
       process.env.ALGOLIA_APP_ID || '',
       process.env.ALGOLIA_API_KEY || ''
