@@ -35,6 +35,7 @@ export function useNonce(): string {
   // Prefer context value, fall back to window value for early initialization
   useEffect(() => {
     if (context?.nonce) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- existing behaviour; follow-up: compute the nonce during render instead of syncing it through state
       setNonce(context.nonce);
     } else if (typeof window !== 'undefined' && (window as any).__NONCE__) {
       setNonce((window as any).__NONCE__);

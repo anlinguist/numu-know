@@ -67,6 +67,7 @@ function NavBar({ openLoginModal }: NavBarProps) {
         if (user) {
             const photo_url = user.photoURL ? user.photoURL : default_photo.src;
 
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- existing auth-driven menu render; follow-up: derive the menu from `user` during render instead of storing JSX in state
             setUserSignedIn(
                 <Menu shadow="md" width={200}>
                     <Menu.Target>
