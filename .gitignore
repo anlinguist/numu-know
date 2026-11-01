@@ -41,9 +41,3 @@ next-env.d.ts
 !tsconfig.json
 !.eslintrc.json
 !assets/**/*.json
-
-# playwright
-/test-results/
-/playwright-report/
-/blob-report/
-/screenshots/
