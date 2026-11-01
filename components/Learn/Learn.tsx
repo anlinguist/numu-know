@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react'
-import ModalVideo from 'react-modal-video'
-import "react-modal-video/scss/modal-video.scss";
-import { Loader, Grid, Card, Text, Badge } from '@mantine/core'; // Changed Spinner to Loader
+import { Loader, Grid, Card, Text, Badge, Modal, AspectRatio } from '@mantine/core'; // Changed Spinner to Loader
 import { collection, getDocs } from 'firebase/firestore';
 import { fbfsdb } from '@/lib/firebase';
 import Link from 'next/link';
@@ -42,6 +40,8 @@ export default function Learn({ blogPosts }: LearnProps) {
     const [isOpen, setOpen] = useState(false)
     const [selectedVid, setSelectedVid] = useState<string | null>(null)
     const [loading, setLoading] = useState(true);
+
+    const selectedVidTitle = learningMaterials.youtube.find((v) => v.vid_id === selectedVid)?.vid_title || 'YouTube video'
 
     const openYTModal = (vid_id: string) => {
         setSelectedVid(vid_id)
@@ -120,7 +120,25 @@ export default function Learn({ blogPosts }: LearnProps) {
                     <TikTok />
                 </div> */}
             <div className={classes.section}>
-                <ModalVideo channel='youtube' isOpen={isOpen} videoId={selectedVid || ''} onClose={() => setOpen(false)} />
+                <Modal
+                    opened={isOpen && !!selectedVid}
+                    onClose={() => setOpen(false)}
+                    title={selectedVidTitle}
+                    size="xl"
+                    centered
+                >
+                    {selectedVid &&
+                        <AspectRatio ratio={16 / 9}>
+                            <iframe
+                                src={`https://www.youtube.com/embed/${encodeURIComponent(selectedVid)}?autoplay=1&rel=0`}
+                                title={selectedVidTitle}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                style={{ border: 0 }}
+                            />
+                        </AspectRatio>
+                    }
+                </Modal>
                 <div className={classes.sectionTitle}>Youtube Videos</div>
                 {
                     loading &&
