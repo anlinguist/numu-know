@@ -14,5 +14,7 @@
     { matchUpdateTypes: ["minor", "patch"], matchCurrentVersion: "!/^0/", groupName: "non-major dependencies" },
     { matchManagers: ["github-actions"], groupName: "GitHub Actions" },
     { matchManagers: ["dockerfile"], groupName: "Docker base images" },
+    // Pinned by `globalhost install`, not Renovate.
+    { matchPackageNames: ["anlinguist/globalhost"], enabled: false },
   ],
 }
