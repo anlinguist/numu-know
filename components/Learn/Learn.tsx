@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react'
-import ModalVideo from 'react-modal-video'
-import "react-modal-video/scss/modal-video.scss";
-import { Loader, Grid, Card, Text, Badge } from '@mantine/core'; // Changed Spinner to Loader
+import { Loader, Grid, Card, Text, Badge, Modal, AspectRatio } from '@mantine/core'; // Changed Spinner to Loader
 import { collection, getDocs } from 'firebase/firestore';
 import { fbfsdb } from '@/lib/firebase';
 import Link from 'next/link';
@@ -11,6 +9,11 @@ import TikTok from './TikTok';
 import type { BlogPost } from '@/types/story';
 
 import classes from './Learn.module.css';
+
+// YouTube video ids are 11 characters from [A-Za-z0-9_-].
+const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+const isValidYouTubeId = (id: string | null | undefined): id is string =>
+    typeof id === 'string' && YOUTUBE_ID_PATTERN.test(id);
 
 interface YouTubeVideo {
     vid_id: string;
@@ -43,7 +46,12 @@ export default function Learn({ blogPosts }: LearnProps) {
     const [selectedVid, setSelectedVid] = useState<string | null>(null)
     const [loading, setLoading] = useState(true);
 
+    const selectedVidTitle = learningMaterials.youtube.find((v) => v.vid_id === selectedVid)?.vid_title || 'YouTube video'
+
     const openYTModal = (vid_id: string) => {
+        if (!isValidYouTubeId(vid_id)) {
+            return
+        }
         setSelectedVid(vid_id)
         setOpen(true)
     }
@@ -56,6 +64,10 @@ export default function Learn({ blogPosts }: LearnProps) {
             let allYTvids = await getDocs(collection(fbfsdb, `ytvids`));
             let ytvidsArr: YouTubeVideo[] = []
             allYTvids.forEach((video) => {
+                // Skip videos whose id isn't a valid YouTube id; they can't be embedded.
+                if (!isValidYouTubeId(video.id)) {
+                    return;
+                }
                 let video_data = video.data();
                 let docData: YouTubeVideo = {
                     "vid_id": video.id,
@@ -120,7 +132,25 @@ export default function Learn({ blogPosts }: LearnProps) {
                     <TikTok />
                 </div> */}
             <div className={classes.section}>
-                <ModalVideo channel='youtube' isOpen={isOpen} videoId={selectedVid || ''} onClose={() => setOpen(false)} />
+                <Modal
+                    opened={isOpen && isValidYouTubeId(selectedVid)}
+                    onClose={() => setOpen(false)}
+                    title={selectedVidTitle}
+                    size="xl"
+                    centered
+                >
+                    {isValidYouTubeId(selectedVid) &&
+                        <AspectRatio ratio={16 / 9}>
+                            <iframe
+                                src={`https://www.youtube-nocookie.com/embed/${selectedVid}?autoplay=1&rel=0`}
+                                title={selectedVidTitle}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                style={{ border: 0 }}
+                            />
+                        </AspectRatio>
+                    }
+                </Modal>
                 <div className={classes.sectionTitle}>Youtube Videos</div>
                 {
                     loading &&
