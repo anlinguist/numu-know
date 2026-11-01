@@ -337,10 +337,25 @@ export async function updateUserPreferences(
       return { success: false, error: 'Unauthorized' };
     }
 
-    const db = getDb();
-    await db.collection('users').doc(user.uid).update(preferences);
+    // Server action arguments come from the client, so build the update from known boolean fields only.
+    const update: { newStories?: boolean; newBlogPosts?: boolean } = {};
+    if (typeof preferences !== 'object' || preferences === null) {
+      return { success: false, error: 'Invalid preferences' };
+    }
+    for (const [key, value] of Object.entries(preferences)) {
+      if ((key !== 'newStories' && key !== 'newBlogPosts') || typeof value !== 'boolean') {
+        return { success: false, error: 'Invalid preferences' };
+      }
+      update[key] = value;
+    }
+    if (Object.keys(update).length === 0) {
+      return { success: false, error: 'Invalid preferences' };
+    }
 
-    logger.info('User preferences updated', { uid: user.uid, preferences });
+    const db = getDb();
+    await db.collection('users').doc(user.uid).update(update);
+
+    logger.info('User preferences updated', { uid: user.uid, preferences: update });
 
     return { success: true };
   } catch (error) {
