@@ -111,8 +111,9 @@ jobs:
           persist-credentials: false
       - name: Install gitleaks
         run: .github/scripts/install-tool.sh "$GITLEAKS_URL" "$GITLEAKS_SHA256" gitleaks
-      - name: Scan every reachable commit
-        run: gitleaks git --redact --no-banner --exit-code 1 .
+      # Only history reachable from the commit under test: other branches' commits aren't what's being merged.
+      - name: Scan every commit reachable from HEAD
+        run: gitleaks git --redact --no-banner --exit-code 1 --log-opts="HEAD" .
 
   # The one check the ruleset requires; it passes only if every job above passed.
   globalhost-ci:
