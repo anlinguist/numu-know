@@ -10,6 +10,11 @@ import type { BlogPost } from '@/types/story';
 
 import classes from './Learn.module.css';
 
+// YouTube video ids are 11 characters from [A-Za-z0-9_-].
+const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+const isValidYouTubeId = (id: string | null | undefined): id is string =>
+    typeof id === 'string' && YOUTUBE_ID_PATTERN.test(id);
+
 interface YouTubeVideo {
     vid_id: string;
     vid_description: string;
@@ -44,6 +49,9 @@ export default function Learn({ blogPosts }: LearnProps) {
     const selectedVidTitle = learningMaterials.youtube.find((v) => v.vid_id === selectedVid)?.vid_title || 'YouTube video'
 
     const openYTModal = (vid_id: string) => {
+        if (!isValidYouTubeId(vid_id)) {
+            return
+        }
         setSelectedVid(vid_id)
         setOpen(true)
     }
@@ -56,6 +64,10 @@ export default function Learn({ blogPosts }: LearnProps) {
             let allYTvids = await getDocs(collection(fbfsdb, `ytvids`));
             let ytvidsArr: YouTubeVideo[] = []
             allYTvids.forEach((video) => {
+                // Skip videos whose id isn't a valid YouTube id; they can't be embedded.
+                if (!isValidYouTubeId(video.id)) {
+                    return;
+                }
                 let video_data = video.data();
                 let docData: YouTubeVideo = {
                     "vid_id": video.id,
@@ -121,16 +133,16 @@ export default function Learn({ blogPosts }: LearnProps) {
                 </div> */}
             <div className={classes.section}>
                 <Modal
-                    opened={isOpen && !!selectedVid}
+                    opened={isOpen && isValidYouTubeId(selectedVid)}
                     onClose={() => setOpen(false)}
                     title={selectedVidTitle}
                     size="xl"
                     centered
                 >
-                    {selectedVid &&
+                    {isValidYouTubeId(selectedVid) &&
                         <AspectRatio ratio={16 / 9}>
                             <iframe
-                                src={`https://www.youtube.com/embed/${encodeURIComponent(selectedVid)}?autoplay=1&rel=0`}
+                                src={`https://www.youtube-nocookie.com/embed/${selectedVid}?autoplay=1&rel=0`}
                                 title={selectedVidTitle}
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 allowFullScreen
