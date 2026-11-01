@@ -7,6 +7,8 @@
 // the dev project. Env: SEED_PROJECT (default numu-know-dev); optional SEED_ADMIN_PASSWORD / SEED_READER_PASSWORD
 // to set test users' passwords (users are created without one otherwise). --dry-run prints the plan only;
 // --skip-users seeds Firestore only (Firebase Auth must be enabled in the project before users can be created).
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { STORIES, TEST_USERS, YT_VIDEOS } from './fixtures.mjs';
 
 export const DEV_PROJECT = /^[a-z][a-z0-9-]*-dev$/;
@@ -73,7 +75,7 @@ async function main() {
   console.log('Done.');
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   main().catch((e) => {
     console.error(e.message);
     process.exit(1);

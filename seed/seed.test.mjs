@@ -13,9 +13,14 @@ test('refuses any project that is not a -dev project', () => {
 });
 
 test('reads nothing from Firestore: every write comes from the fixtures', () => {
-  const src = readFileSync(new URL('./seed-dev.mjs', import.meta.url), 'utf8');
-  for (const read of ['.get(', 'getDoc', 'getDocs', '.listDocuments(', '.where(', 'onSnapshot', 'getAll(']) {
-    assert.ok(!src.includes(read), `seed-dev.mjs must not read Firestore (${read})`);
+  for (const file of ['./seed-dev.mjs', './fixtures.mjs']) {
+    const src = readFileSync(new URL(file, import.meta.url), 'utf8');
+    for (const read of ['.get(', 'getDoc', 'getDocs', '.listDocuments(', '.listCollections(', '.where(', '.stream(', 'onSnapshot', 'getAll(', 'runTransaction', 'collectionGroup']) {
+      assert.ok(!src.includes(read), `${file} must not read Firestore (${read})`);
+    }
+    // One app, for the checked project id; the production id never appears.
+    assert.equal(src.split('initializeApp(').length - 1, file === './seed-dev.mjs' ? 1 : 0, `${file}: initializeApp calls`);
+    assert.ok(!/['"`]numu-know['"`]/.test(src), `${file} must not name the production project`);
   }
   const paths = plan().map(([p]) => p);
   assert.deepEqual(paths.filter((p) => p.startsWith('documents/')), STORIES.live.map((s) => `documents/${s.title}`));
