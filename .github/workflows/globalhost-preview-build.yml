@@ -1,0 +1,54 @@
+# globalhost previews, step 1 (PLAN P1-11, ADR-0016 in anlinguist/globalhost): build the PR's image.
+# Runs PR code and holds no credentials of any kind (no id-token, read-only token). Deploying happens in
+# globalhost-preview.yml, which runs only from main and never executes PR code.
+name: globalhost-preview-build
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+concurrency:
+  group: globalhost-preview-build-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build (no credentials)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      # The build environment comes from main's factory.yaml, not the PR's.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          path: .globalhost-base
+          sparse-checkout: factory.yaml
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Build the image with main's previewEnv
+        run: |
+          yq -o=json '.parts.web.config.previewEnv // {}' .globalhost-base/factory.yaml \
+            | jq -r 'to_entries[] | "\(.key)=\(.value|tostring)"' > "$RUNNER_TEMP/preview.env"
+          if grep -Ev '^NEXT_PUBLIC_[A-Z0-9_]+=[^[:space:]]*$' "$RUNNER_TEMP/preview.env"; then
+            echo "::error::previewEnv may only hold NEXT_PUBLIC_* names with single-line values"; exit 1
+          fi
+          rm -rf .globalhost-base
+          args=()
+          while IFS= read -r line; do args+=(--build-arg "$line"); done < "$RUNNER_TEMP/preview.env"
+          docker build "${args[@]}" -t preview:local .
+          docker save preview:local | gzip -1 > "$RUNNER_TEMP/image.tar.gz"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: preview-image
+          path: ${{ runner.temp }}/image.tar.gz
+          retention-days: 1
+          compression-level: 0
