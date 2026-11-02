@@ -6,6 +6,7 @@ import classes from './Stories.module.css';
 import DocsList from './DocsList';
 import { auth, fbfsdb } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
+import type { User } from "firebase/auth";
 import { getDoc, doc } from 'firebase/firestore';
 import type { UserDocument, Highlights } from '@/types/story';
 import StoriesContext from './StoriesContext';
@@ -13,6 +14,51 @@ import { useRouter, usePathname } from 'next/navigation';
 
 import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
+
+type MetadataSetters = {
+    setDocumentList: (documents: string[]) => void;
+    setDraftsList: (drafts: string[]) => void;
+    setIsAdmin: (isAdmin: boolean) => void;
+    setNowLoading: (state: string) => void;
+};
+
+// Loads the live story list and, for admins, the drafts list, reporting each piece as it arrives.
+async function fetchMetadata(user: User | null | undefined, set: MetadataSetters): Promise<void> {
+    // Live docs load regardless of user, so the public can see them.
+    try {
+        let allLiveFB = await getDoc(doc(fbfsdb, `allDocuments/live`));
+        if (allLiveFB.exists()) {
+            let allLive = allLiveFB.data();
+            let allLiveDocuments: string[] = allLive['documents'];
+            allLiveDocuments.sort((a: string, b: string) => a.localeCompare(b));
+            set.setDocumentList(allLiveDocuments);
+        } else {
+            set.setNowLoading('notloading');
+        }
+
+        if (user) {
+            let userDoc = await getDoc(doc(fbfsdb, `users/${user.uid}`))
+            if (userDoc.exists()) {
+                let userFields = userDoc.data() as UserDocument;
+                if (userFields?.admin) {
+                    set.setIsAdmin(true)
+                    let allDraftsFB = await getDoc(doc(fbfsdb, `allDocuments/drafts`));
+                    if (allDraftsFB.exists()) {
+                        let allDraftsFull = allDraftsFB.data();
+                        let allDrafts: string[] = allDraftsFull['documents']
+                        allDrafts.sort((a: string, b: string) => a.localeCompare(b))
+                        set.setDraftsList(allDrafts)
+                    }
+                } else {
+                    set.setIsAdmin(false)
+                }
+            }
+        }
+        set.setNowLoading('notloading');
+    } catch (err) {
+        set.setNowLoading('notloading');
+    }
+}
 
 export default function StoriesShell({ children }: { children: React.ReactNode }) {
     const [user] = useAuthState(auth);
@@ -33,50 +79,15 @@ export default function StoriesShell({ children }: { children: React.ReactNode }
     // docIsSelected logic: if slug exists, we are viewing a doc.
     const docIsSelected = slug.length > 0 ? 'docisselected' : 'docnotselected';
 
-    const loadMetadata = useCallback(async () => {
-        // if (!user) return; // Allow public to see live docs? Logic suggests user check inside, but we need public access too.
-        // Original code had `if (!user) return` but also loaded live docs. 
-        // Let's load live docs regardless of user.
-
-        try {
-            let allLiveFB = await getDoc(doc(fbfsdb, `allDocuments/live`));
-            if (allLiveFB.exists()) {
-                let allLive = allLiveFB.data();
-                let allLiveDocuments: string[] = allLive['documents'];
-                allLiveDocuments.sort((a: string, b: string) => a.localeCompare(b));
-                setDocumentList(allLiveDocuments);
-            } else {
-                setNowLoading('notloading');
-            }
-
-            if (user) {
-                let userDoc = await getDoc(doc(fbfsdb, `users/${user.uid}`))
-                if (userDoc.exists()) {
-                    let userFields = userDoc.data() as UserDocument;
-                    if (userFields?.admin) {
-                        setIsAdmin(true)
-                        let allDraftsFB = await getDoc(doc(fbfsdb, `allDocuments/drafts`));
-                        if (allDraftsFB.exists()) {
-                            let allDraftsFull = allDraftsFB.data();
-                            let allDrafts: string[] = allDraftsFull['documents']
-                            allDrafts.sort((a: string, b: string) => a.localeCompare(b))
-                            setDraftsList(allDrafts)
-                        }
-                    } else {
-                        setIsAdmin(false)
-                    }
-                }
-            }
-            setNowLoading('notloading');
-        } catch (err) {
-            setNowLoading('notloading');
-        }
-    }, [user]);
+    const loadMetadata = useCallback(
+        () => fetchMetadata(user, { setDocumentList, setDraftsList, setIsAdmin, setNowLoading }),
+        [user]
+    );
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- loadMetadata fetches from Firebase and sets state; follow-up: move the loading flag out of the synchronous effect path
-        loadMetadata();
-    }, [loadMetadata]);
+        // Every state update happens once a Firestore read settles, never synchronously here.
+        fetchMetadata(user, { setDocumentList, setDraftsList, setIsAdmin, setNowLoading });
+    }, [user]);
 
     const selectDoc = (chosendoc: string): void => {
         router.push("/stories/" + encodeURIComponent(chosendoc));
