@@ -206,12 +206,15 @@ jobs:
           echo "::add-mask::$secret"
           npm ci --ignore-scripts --no-audit --no-fund > /dev/null
           npx --no-install playwright install --with-deps chromium > /dev/null
-          # Wait out the cold start (and the tag becoming routable), up to 3 minutes.
-          for _ in $(seq 1 36); do
-            code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' -H "CF-Access-Client-Id: $id" -H "CF-Access-Client-Secret: $secret" "https://${host}/")"
+          # Wait out the cold start (and the tag becoming routable): 12 tries of up to 10s + 5s, about 3 minutes.
+          code=000
+          for _ in $(seq 1 12); do
+            # A cold start can outlast --max-time (curl exit 28); under `bash -e` that must not end the step.
+            code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' -H "CF-Access-Client-Id: $id" -H "CF-Access-Client-Secret: $secret" "https://${host}/" || true)"
             [ "$code" = 200 ] && break
             sleep 5
           done
+          [ "$code" = 200 ] || echo "::warning::preview ${host} still returned ${code} after ~3 min; screenshots may show an error page"
           # The browser gets a clean environment and no credentials file; the upload uses the short-lived access
           # token minted before it ran.
           rm -f "$CREDS"
