@@ -28,8 +28,10 @@ for (const [vp, opts] of viewports) {
     const file = `${vp}${r === "/" ? "-home" : r.replace(/[^A-Za-z0-9]+/g, "-")}.png`;
     let status = 0;
     try {
-      const res = await page.goto(`https://${host}${r}`, { waitUntil: "networkidle", timeout: 45_000 });
+      const res = await page.goto(`https://${host}${r}`, { waitUntil: "load", timeout: 45_000 });
       status = res?.status() ?? 0;
+      // Pages with embeds or polling (e.g. /learn's YouTube list) never go network-idle: give them 10s, then shoot.
+      await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
       await page.screenshot({ path: `shots/${file}`, fullPage: true });
     } catch (e) {
       console.error(`${vp} ${r}: ${e.message}`);
