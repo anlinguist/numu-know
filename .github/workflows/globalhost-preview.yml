@@ -144,11 +144,13 @@ jobs:
         env:
           IMAGE: ${{ steps.push.outputs.image }}
         run: |
-          # Empty command/args reset them to the image's own (the placeholder sets args); env is replaced wholesale.
+          # Service-level flags (--tag, --no-traffic) must come before --container: everything after it applies to
+          # that container. Empty command/args reset them to the image's own (the placeholder sets args); env is
+          # replaced wholesale.
           gcloud run deploy "$SERVICE" --project "$DEV_PROJECT" --region "$REGION" --quiet \
+            --tag "pr-${PR}" --no-traffic \
             --container app --image "$IMAGE" --command "" --args "" \
-            --set-env-vars "FIREBASE_PROJECT_ID=${DEV_PROJECT}" \
-            --tag "pr-${PR}" --no-traffic
+            --set-env-vars "FIREBASE_PROJECT_ID=${DEV_PROJECT}"
       - name: Allow sign-in from the preview host (Firebase Auth, dev project)
         env:
           TOKEN: ${{ steps.auth.outputs.access_token }}
