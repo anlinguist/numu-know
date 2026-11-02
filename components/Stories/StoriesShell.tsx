@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Box } from '@mantine/core';
 import classes from './Stories.module.css';
 import DocsList from './DocsList';
@@ -21,6 +21,16 @@ type MetadataSetters = {
     setIsAdmin: (isAdmin: boolean) => void;
     setNowLoading: (state: string) => void;
 };
+
+// Wraps the setters so they do nothing once `isCurrent()` turns false (the user has changed).
+function settersWhile(set: MetadataSetters, isCurrent: () => boolean): MetadataSetters {
+    return {
+        setDocumentList: (documents) => { if (isCurrent()) set.setDocumentList(documents); },
+        setDraftsList: (drafts) => { if (isCurrent()) set.setDraftsList(drafts); },
+        setIsAdmin: (isAdmin) => { if (isCurrent()) set.setIsAdmin(isAdmin); },
+        setNowLoading: (state) => { if (isCurrent()) set.setNowLoading(state); },
+    };
+}
 
 // Loads the live story list and, for admins, the drafts list, reporting each piece as it arrives.
 async function fetchMetadata(user: User | null | undefined, set: MetadataSetters): Promise<void> {
@@ -79,14 +89,33 @@ export default function StoriesShell({ children }: { children: React.ReactNode }
     // docIsSelected logic: if slug exists, we are viewing a doc.
     const docIsSelected = slug.length > 0 ? 'docisselected' : 'docnotselected';
 
+    // On sign-out, drop the previous user's admin view right away (adjusting state during render).
+    const [metadataUser, setMetadataUser] = useState(user);
+    if (metadataUser !== user) {
+        setMetadataUser(user);
+        if (!user) {
+            setIsAdmin(false);
+            setDraftsList([]);
+        }
+    }
+
+    // The user the latest metadata load is for; results for any other user are ignored.
+    const activeUser = useRef(user);
+
     const loadMetadata = useCallback(
-        () => fetchMetadata(user, { setDocumentList, setDraftsList, setIsAdmin, setNowLoading }),
+        () => fetchMetadata(user, settersWhile({ setDocumentList, setDraftsList, setIsAdmin, setNowLoading }, () => activeUser.current === user)),
         [user]
     );
 
     useEffect(() => {
-        // Every state update happens once a Firestore read settles, never synchronously here.
-        fetchMetadata(user, { setDocumentList, setDraftsList, setIsAdmin, setNowLoading });
+        activeUser.current = user;
+        let ignore = false;
+        // Every state update happens once a Firestore read settles, never synchronously here,
+        // and none happens after the user changes.
+        fetchMetadata(user, settersWhile({ setDocumentList, setDraftsList, setIsAdmin, setNowLoading }, () => !ignore));
+        return () => {
+            ignore = true;
+        };
     }, [user]);
 
     const selectDoc = (chosendoc: string): void => {
