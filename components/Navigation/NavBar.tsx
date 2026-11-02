@@ -17,7 +17,9 @@ import {
     Drawer
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { doc, getDoc, deleteField, updateDoc } from '@firebase/firestore';
+import { doc, getDoc } from '@firebase/firestore';
+import { updateUserPreferences } from '@/app/actions/story-actions';
+import { showError } from '@/lib/notifications';
 
 import classes from './Navigation.module.css';
 
@@ -33,6 +35,8 @@ function NavBar({ openLoginModal }: NavBarProps) {
 
     const [optedIntoBlogPosts, setOptedIntoBlogPosts] = useState(false);
     const [optedIntoStories, setOptedIntoStories] = useState(false);
+    // One save per preference at a time, so the checkbox can't drift from what was saved.
+    const [saving, setSaving] = useState({ newStories: false, newBlogPosts: false });
     const pathname = usePathname();
 
     useEffect(() => {
@@ -103,35 +107,28 @@ function NavBar({ openLoginModal }: NavBarProps) {
         }
     }, [user, loading, openLoginModal, open]);
 
-    const toggleBlogs = async () => {
-        if (!user?.uid) return;
-        if (optedIntoBlogPosts) {
-            await updateDoc(doc(fbfsdb, `users/${user.uid}`), {
-                newBlogPosts: deleteField()
-            })
-            setOptedIntoBlogPosts(false);
+    const savePreference = async (
+        key: 'newStories' | 'newBlogPosts',
+        value: boolean,
+        setOptedIn: (optedIn: boolean) => void
+    ) => {
+        if (saving[key]) return;
+        setSaving((prev) => ({ ...prev, [key]: true }));
+        const token = await user?.getIdToken().catch(() => null);
+        const result = token
+            ? await updateUserPreferences(token, { [key]: value }).catch(() => null)
+            : null;
+        if (result?.success) {
+            setOptedIn(value);
         } else {
-            await updateDoc(doc(fbfsdb, `users/${user.uid}`), {
-                newBlogPosts: true
-            })
-            setOptedIntoBlogPosts(true);
+            showError({ message: 'Could not save your notification settings' });
         }
+        setSaving((prev) => ({ ...prev, [key]: false }));
     }
 
-    const toggleStories = async () => {
-        if (!user?.uid) return;
-        if (optedIntoStories) {
-            setOptedIntoStories(false);
-            await updateDoc(doc(fbfsdb, `users/${user.uid}`), {
-                newStories: deleteField()
-            })
-        } else {
-            setOptedIntoStories(true);
-            await updateDoc(doc(fbfsdb, `users/${user.uid}`), {
-                newStories: true
-            })
-        }
-    }
+    const toggleBlogs = () => savePreference('newBlogPosts', !optedIntoBlogPosts, setOptedIntoBlogPosts);
+
+    const toggleStories = () => savePreference('newStories', !optedIntoStories, setOptedIntoStories);
 
     return (
         <div className={classes.navbar}>
@@ -166,6 +163,7 @@ function NavBar({ openLoginModal }: NavBarProps) {
                         label="Get updated about new blog posts"
                         checked={optedIntoBlogPosts}
                         onChange={toggleBlogs}
+                        disabled={saving.newBlogPosts}
                         color="dark"
                         size="md"
                     />
@@ -173,6 +171,7 @@ function NavBar({ openLoginModal }: NavBarProps) {
                         label="Get updated about new interlinear stories"
                         checked={optedIntoStories}
                         onChange={toggleStories}
+                        disabled={saving.newStories}
                         color="dark"
                         size="md"
                     />
