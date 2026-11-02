@@ -28,8 +28,12 @@ for (const [vp, opts] of viewports) {
     const file = `${vp}${r === "/" ? "-home" : r.replace(/[^A-Za-z0-9]+/g, "-")}.png`;
     let status = 0;
     try {
-      const res = await page.goto(`https://${host}${r}`, { waitUntil: "networkidle", timeout: 45_000 });
+      const res = await page.goto(`https://${host}${r}`, { waitUntil: "domcontentloaded", timeout: 45_000 });
       status = res?.status() ?? 0;
+      // Embeds can stall `load`, and polling pages (e.g. /learn's YouTube list) never go network-idle: wait for each
+      // as long as is reasonable, then shoot whatever rendered.
+      await page.waitForLoadState("load", { timeout: 15_000 }).catch(() => {});
+      await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
       await page.screenshot({ path: `shots/${file}`, fullPage: true });
     } catch (e) {
       console.error(`${vp} ${r}: ${e.message}`);
