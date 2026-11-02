@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { auth, logout, fbfsdb } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import default_photo from '@/assets/def_prof_pic.jpeg';
@@ -37,7 +37,6 @@ function NavBar({ openLoginModal }: NavBarProps) {
     const [optedIntoStories, setOptedIntoStories] = useState(false);
     // One save per preference at a time, so the checkbox can't drift from what was saved.
     const [saving, setSaving] = useState({ newStories: false, newBlogPosts: false });
-    const savingRef = useRef({ newStories: false, newBlogPosts: false });
     const pathname = usePathname();
 
     useEffect(() => {
@@ -113,25 +112,18 @@ function NavBar({ openLoginModal }: NavBarProps) {
         value: boolean,
         setOptedIn: (optedIn: boolean) => void
     ) => {
-        if (savingRef.current[key]) return;
-        savingRef.current[key] = true;
+        if (saving[key]) return;
         setSaving((prev) => ({ ...prev, [key]: true }));
-        try {
-            const token = await user?.getIdToken().catch(() => null);
-            if (!token) {
-                showError({ message: 'Could not save your notification settings' });
-                return;
-            }
+        const token = await user?.getIdToken().catch(() => null);
+        const result = token
+            ? await updateUserPreferences(token, { [key]: value }).catch(() => null)
+            : null;
+        if (result?.success) {
             setOptedIn(value);
-            const result = await updateUserPreferences(token, { [key]: value }).catch(() => null);
-            if (!result?.success) {
-                setOptedIn(!value);
-                showError({ message: 'Could not save your notification settings' });
-            }
-        } finally {
-            savingRef.current[key] = false;
-            setSaving((prev) => ({ ...prev, [key]: false }));
+        } else {
+            showError({ message: 'Could not save your notification settings' });
         }
+        setSaving((prev) => ({ ...prev, [key]: false }));
     }
 
     const toggleBlogs = () => savePreference('newBlogPosts', !optedIntoBlogPosts, setOptedIntoBlogPosts);

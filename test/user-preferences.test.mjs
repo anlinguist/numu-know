@@ -71,8 +71,9 @@ test('firestore.rules lets clients read their user document but not write it', (
 test('NavBar ignores toggles while that preference is saving', () => {
   const src = read('components/Navigation/NavBar.tsx');
   const fn = src.slice(src.indexOf('const savePreference'), src.indexOf('const toggleBlogs'));
-  assert.match(fn, /if \(savingRef\.current\[key\]\) return;/, 'a second toggle for the same key is ignored');
-  assert.match(fn, /finally \{[\s\S]*savingRef\.current\[key\] = false;[\s\S]*setSaving\(/, 'the guard is released after the save settles');
+  assert.match(fn, /if \(saving\[key\]\) return;/, 'a second toggle for the same key is ignored');
+  assert.match(fn, /\.catch\(\(\) => null\)[\s\S]*\.catch\(\(\) => null\)[\s\S]*setSaving\(\(prev\) => \(\{ \.\.\.prev, \[key\]: false \}\)\);\s*\}\s*$/, 'the guard is released after the save settles, even on errors');
+  assert.match(fn, /if \(result\?\.success\) \{\s*setOptedIn\(value\);/, 'the checkbox only changes once the save succeeds');
   assert.equal((src.match(/disabled=\{saving\.(newBlogPosts|newStories)\}/g) ?? []).length, 2, 'both checkboxes are disabled while saving');
 });
 
@@ -81,7 +82,8 @@ test('NavBar shows the save error when getting the ID token fails', () => {
   const fn = src.slice(src.indexOf('const savePreference'), src.indexOf('const toggleBlogs'));
   assert.match(fn, /getIdToken\(\)\.catch\(\(\) => null\)/, 'a throwing getIdToken is caught');
   assert.ok(!/if \(!token\) return;/.test(fn), 'a missing token does not fail silently');
-  assert.match(fn, /if \(!token\) \{[\s\S]*?showError\(\{ message: 'Could not save your notification settings' \}\)/);
+  assert.match(fn, /const result = token\s*\?[\s\S]*:\s*null;/, 'no token means no successful save');
+  assert.match(fn, /\} else \{\s*showError\(\{ message: 'Could not save your notification settings' \}\);/);
 });
 
 test('CLAUDE.md explains why updateUserPreferences skips the admin claim', () => {
