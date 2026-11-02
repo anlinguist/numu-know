@@ -8,6 +8,7 @@ import { getAdminAuth, getAdminStorage } from '@/lib/firebase-admin';
 import { revalidatePath } from 'next/cache';
 import { DEFAULT_STORY_AUTHOR, DEFAULT_STORY_VARIANT } from '@/lib/constants';
 import { logger } from '@/lib/logger';
+import { provisionUser, type ProvisionResult } from '@/lib/user-provisioning';
 import type { StoryContent, Word } from '@/types/story';
 
 interface ActionResult<T = unknown> {
@@ -361,5 +362,30 @@ export async function updateUserPreferences(
   } catch (error) {
     logger.error('Failed to update preferences', error);
     return { success: false, error: 'Failed to update preferences' };
+  }
+}
+
+/**
+ * First sign-in: create the caller's users/{uid} document if it doesn't exist (issue #43). Firestore rules deny
+ * client writes to user documents, so this runs with the Admin SDK. The document is built from the verified
+ * ID token only (lib/user-provisioning.ts); nothing the client sends besides the token is used.
+ */
+export async function ensureUserDoc(token: string): Promise<ProvisionResult> {
+  try {
+    const db = getDb();
+    const result = await provisionUser(token, {
+      verifyIdToken: (idToken) => getAdminAuth().verifyIdToken(idToken),
+      userExists: async (uid) => (await db.collection('users').doc(uid).get()).exists,
+      createUser: async (uid, data) => {
+        await db.collection('users').doc(uid).create(data);
+      },
+    });
+    if (result.success && result.created) {
+      logger.info('User document created', { created: true });
+    }
+    return result;
+  } catch (error) {
+    logger.error('Failed to create user document', error);
+    return { success: false, error: 'Failed to set up your account' };
   }
 }
