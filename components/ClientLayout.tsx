@@ -2,6 +2,7 @@
 
 import { ReactNode, useState } from 'react';
 import Header from '@/components/Header/Header';
+import LoginModal from '@/components/Auth/LoginModal';
 import { MantineProviders } from './MantineProviders';
 import { Notifications } from '@mantine/notifications';
 
@@ -24,6 +25,7 @@ export default function ClientRootLayout({
           <Notifications />
             <>
               <Header openLoginModal={openLoginModal} />
+              <LoginModal opened={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
               {children}
             </>
         </MantineProviders>
