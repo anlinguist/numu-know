@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { auth, logout, fbfsdb } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import default_photo from '@/assets/def_prof_pic.jpeg';
@@ -23,12 +23,15 @@ import { showError } from '@/lib/notifications';
 
 import classes from './Navigation.module.css';
 
+// Nothing to subscribe to: this only tells the server render and hydration (false)
+// apart from client renders after hydration (true).
+const subscribeToNothing = () => () => {};
+
 interface NavBarProps {
     openLoginModal: () => void;
 }
 
 function NavBar({ openLoginModal }: NavBarProps) {
-    const [userSignedIn, setUserSignedIn] = useState<React.ReactNode>(null);
     const [user, loading] = useAuthState(auth);
     const [opened, { open, close }] = useDisclosure(false); // For settings modal
     const [drawerOpened, { toggle: toggleDrawer, close: closeDrawer }] = useDisclosure(false); // For mobile drawer
@@ -65,47 +68,38 @@ function NavBar({ openLoginModal }: NavBarProps) {
         }
     }, [user]);
 
-    useEffect(() => {
-        if (loading) return;
+    // The avatar menu is derived from the auth state. It renders only after hydration, so the
+    // first client render matches the server's, and only once auth has resolved.
+    const hydrated = useSyncExternalStore(subscribeToNothing, () => true, () => false);
+    const userMenu = !hydrated || loading ? null : user ? (
+        <Menu shadow="md" width={200}>
+            <Menu.Target>
+                <Avatar src={user.photoURL ? user.photoURL : default_photo.src} alt="user" radius="xl" style={{ cursor: 'pointer' }} />
+            </Menu.Target>
 
-        if (user) {
-            const photo_url = user.photoURL ? user.photoURL : default_photo.src;
+            <Menu.Dropdown>
+                <Menu.Item onClick={open}>
+                    Settings
+                </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item color="red" onClick={logout}>
+                    Sign out
+                </Menu.Item>
+            </Menu.Dropdown>
+        </Menu>
+    ) : (
+        <Menu shadow="md" width={200}>
+            <Menu.Target>
+                <Avatar src={default_photo.src} alt="user" radius="xl" style={{ cursor: 'pointer' }} />
+            </Menu.Target>
 
-            // eslint-disable-next-line react-hooks/set-state-in-effect -- existing auth-driven menu render; follow-up: derive the menu from `user` during render instead of storing JSX in state
-            setUserSignedIn(
-                <Menu shadow="md" width={200}>
-                    <Menu.Target>
-                        <Avatar src={photo_url} alt="user" radius="xl" style={{ cursor: 'pointer' }} />
-                    </Menu.Target>
-
-                    <Menu.Dropdown>
-                        <Menu.Item onClick={open}>
-                            Settings
-                        </Menu.Item>
-                        <Menu.Divider />
-                        <Menu.Item color="red" onClick={logout}>
-                            Sign out
-                        </Menu.Item>
-                    </Menu.Dropdown>
-                </Menu>
-            )
-        } else {
-            const photo_url = default_photo.src;
-            setUserSignedIn(
-                <Menu shadow="md" width={200}>
-                    <Menu.Target>
-                        <Avatar src={photo_url} alt="user" radius="xl" style={{ cursor: 'pointer' }} />
-                    </Menu.Target>
-
-                    <Menu.Dropdown>
-                        <Menu.Item onClick={openLoginModal}>
-                            Sign in
-                        </Menu.Item>
-                    </Menu.Dropdown>
-                </Menu>
-            )
-        }
-    }, [user, loading, openLoginModal, open]);
+            <Menu.Dropdown>
+                <Menu.Item onClick={openLoginModal}>
+                    Sign in
+                </Menu.Item>
+            </Menu.Dropdown>
+        </Menu>
+    );
 
     const savePreference = async (
         key: 'newStories' | 'newBlogPosts',
@@ -140,7 +134,7 @@ function NavBar({ openLoginModal }: NavBarProps) {
 
             {/* User Menu Group */}
             <Group gap="xs" style={{ marginLeft: '20px' }}>
-                {userSignedIn}
+                {userMenu}
             </Group>
 
 

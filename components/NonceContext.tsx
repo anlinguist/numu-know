@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useSyncExternalStore } from 'react';
 
 interface NonceContextType {
   nonce: string;
@@ -28,19 +28,17 @@ export function NonceProvider({ nonce, children }: NonceProviderProps) {
   );
 }
 
+// window.__NONCE__ is a plain global set by NonceProvider with no change events, so
+// there is nothing to subscribe to: like before, it is read when the hook renders.
+const subscribeToWindowNonce = () => () => {};
+const getWindowNonce = (): string => (window as any).__NONCE__ || '';
+// The server render and hydration see no window nonce, as before.
+const getServerWindowNonce = (): string => '';
+
 export function useNonce(): string {
-  const [nonce, setNonce] = useState<string>('');
   const context = useContext(NonceContext);
-
   // Prefer context value, fall back to window value for early initialization
-  useEffect(() => {
-    if (context?.nonce) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- existing behaviour; follow-up: compute the nonce during render instead of syncing it through state
-      setNonce(context.nonce);
-    } else if (typeof window !== 'undefined' && (window as any).__NONCE__) {
-      setNonce((window as any).__NONCE__);
-    }
-  }, [context?.nonce]);
+  const windowNonce = useSyncExternalStore(subscribeToWindowNonce, getWindowNonce, getServerWindowNonce);
 
-  return context?.nonce || nonce || '';
+  return context?.nonce || windowNonce || '';
 }

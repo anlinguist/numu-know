@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { IoMdClose, IoIosSearch } from 'react-icons/io';
 import { Loader, TextInput, Modal } from '@mantine/core';
 import { MAX_SEARCH_QUERY_LENGTH } from '@/lib/constants';
@@ -16,6 +16,66 @@ interface SearchProps {
     opened: boolean;
 }
 
+type SearchOutcome = { error: string } | { results: Array<GroupedSearchResults[string]> };
+
+// Validates the query and asks /api/queryNumu, grouping the hits by story. Touches no React state.
+async function searchNumu(query: string | undefined): Promise<SearchOutcome | null> {
+    if (!query) return null;
+
+    // Client-side validation
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length === 0) {
+        return { error: 'Search query cannot be empty' };
+    }
+
+    if (trimmedQuery.length > MAX_SEARCH_QUERY_LENGTH) {
+        return { error: `Search query too long. Maximum ${MAX_SEARCH_QUERY_LENGTH} characters allowed.` };
+    }
+
+    try {
+        const sendObj = {
+            q_type: 'simple',
+            q_word: trimmedQuery
+        };
+
+        const response = await fetch('/api/queryNumu', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(sendObj)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            return { error: errorData.error || 'Search failed' };
+        }
+
+        const hits: AlgoliaSearchHit[] = await response.json();
+
+        // Group hits by storyID
+        const groupedResults: GroupedSearchResults = {};
+        if (Array.isArray(hits)) {
+            hits.forEach((hit) => {
+                const storyID = hit.storyID;
+                if (!groupedResults[storyID]) {
+                    groupedResults[storyID] = {
+                        objectID: storyID,
+                        storyTitle: hit.storyTitle || storyID,
+                        sentenceHits: []
+                    };
+                }
+                groupedResults[storyID].sentenceHits.push(hit);
+            });
+        }
+
+        // Convert grouped object to array
+        return { results: Object.values(groupedResults) };
+    } catch (error) {
+        return { error: 'Network error. Please try again.' };
+    }
+}
+
 function Search(props: SearchProps) {
     const [searchLoader, setSearchLoader] = useState('loading')
     const [results, setResults] = useState<Array<GroupedSearchResults[string]>>([])
@@ -24,72 +84,25 @@ function Search(props: SearchProps) {
     const [finalResults, setFinalResults] = useState<GroupedSearchResults>({})
     const [searchError, setSearchError] = useState('')
 
+    const applySearchOutcome = (outcome: SearchOutcome | null): void => {
+        if (!outcome) return;
+        if ('error' in outcome) {
+            setSearchError(outcome.error);
+        } else {
+            setResults(outcome.results);
+        }
+        setSearchLoader('');
+    }
+
+    // Every search takes a new number; only the latest one may set state, so a slow
+    // earlier search can't overwrite newer results.
+    const latestSearch = useRef(0)
+
     const queryNumu = async (query: string | undefined): Promise<void> => {
-        if (!query) return;
-
-        // Client-side validation
-        const trimmedQuery = query.trim();
-        if (trimmedQuery.length === 0) {
-            setSearchError('Search query cannot be empty');
-            setSearchLoader('');
-            return;
-        }
-
-        if (trimmedQuery.length > MAX_SEARCH_QUERY_LENGTH) {
-            setSearchError(`Search query too long. Maximum ${MAX_SEARCH_QUERY_LENGTH} characters allowed.`);
-            setSearchLoader('');
-            return;
-        }
-
-        setSearchError('');
-
-        try {
-            const sendObj = {
-                q_type: 'simple',
-                q_word: trimmedQuery
-            };
-
-            const response = await fetch('/api/queryNumu', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(sendObj)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                setSearchError(errorData.error || 'Search failed');
-                setSearchLoader('');
-                return;
-            }
-
-            const hits: AlgoliaSearchHit[] = await response.json();
-
-            // Group hits by storyID
-            const groupedResults: GroupedSearchResults = {};
-            if (Array.isArray(hits)) {
-                hits.forEach((hit) => {
-                    const storyID = hit.storyID;
-                    if (!groupedResults[storyID]) {
-                        groupedResults[storyID] = {
-                            objectID: storyID,
-                            storyTitle: hit.storyTitle || storyID,
-                            sentenceHits: []
-                        };
-                    }
-                    groupedResults[storyID].sentenceHits.push(hit);
-                });
-            }
-
-            // Convert grouped object to array
-            const resultsArray = Object.values(groupedResults);
-
-            setResults(resultsArray);
-            setSearchLoader('');
-        } catch (error) {
-            setSearchError('Network error. Please try again.');
-            setSearchLoader('');
+        const request = ++latestSearch.current;
+        const outcome = await searchNumu(query);
+        if (request === latestSearch.current) {
+            applySearchOutcome(outcome);
         }
     }
 
@@ -101,11 +114,26 @@ function Search(props: SearchProps) {
         queryNumu(searchTerm);
     }
 
+    // When the modal opens (or the outer search term changes while it is open), seed the
+    // input from the outer search term. This adjusts state during render rather than in an effect.
+    const [seededFrom, setSeededFrom] = useState({ opened: false, searchTerm: '' })
+    if (seededFrom.opened !== props.opened || seededFrom.searchTerm !== (props.searchTerm ?? '')) {
+        setSeededFrom({ opened: props.opened, searchTerm: props.searchTerm ?? '' })
+        if (props.opened && props.searchTerm) {
+            setSearchTerm(props.searchTerm)
+            setSearchError('')
+        }
+    }
+
+    // ...and run that search. The request is the effect; its state updates happen once it settles.
     useEffect(() => {
         if (props.opened && props.searchTerm) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect -- existing behaviour; follow-up: seed searchTerm from props when the modal opens instead of in an effect
-            setSearchTerm(props.searchTerm)
-            queryNumu(props.searchTerm);
+            const request = ++latestSearch.current;
+            searchNumu(props.searchTerm).then((outcome) => {
+                if (request === latestSearch.current) {
+                    applySearchOutcome(outcome);
+                }
+            });
         }
     }, [props.searchTerm, props.opened])
 
