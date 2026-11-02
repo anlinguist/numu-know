@@ -33,11 +33,16 @@ export function proxy(request: NextRequest) {
 
   const isDev = process.env.NODE_ENV !== 'production';
 
+  // Firebase Auth's Google popup and redirect sign-in talk to a hidden iframe on the auth domain (issue #43).
+  // Allow exactly that host, taken from the build's web config; skip it if the value isn't a plain hostname.
+  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? '';
+  const authFrameSrc = /^[a-z0-9.-]+$/i.test(authDomain) ? ` https://${authDomain}` : '';
+
   // Build CSP header with nonce
   const cspHeader = isDev
     ? [
         "default-src 'self'",
-        "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
+        `frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com${authFrameSrc}`,
         `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com`,
         `style-src 'self' 'unsafe-inline'`,
         "font-src 'self' data:",
@@ -49,7 +54,7 @@ export function proxy(request: NextRequest) {
       ].join('; ')
     : [
         "default-src 'self'",
-        "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
+        `frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com${authFrameSrc}`,
         `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com`,
         `style-src 'self' 'unsafe-inline'`,
         "font-src 'self' data:",
