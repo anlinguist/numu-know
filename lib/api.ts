@@ -35,9 +35,13 @@ export const api = {
     return response.json();
   },
 
-  getYTVideos: async () => {
+  // Admin-only: refreshes the ytvids collection from YouTube. `token` is the admin's Firebase ID token.
+  getYTVideos: async (token: string) => {
     const response = await fetch('/api/getYTVideos', {
-      method: 'GET',
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
     return response.json();
   },

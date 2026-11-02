@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase-admin';
+import { requireAdmin } from '@/lib/middleware/auth';
 import { logger } from '@/lib/logger';
-import { rateLimitPublic } from '@/lib/rate-limit';
+import { rateLimitAdmin } from '@/lib/rate-limit';
 
-export async function GET(request: NextRequest) {
+// Refreshes the `ytvids` collection from the YouTube Data API. Admin-only write: pages read videos
+// from Firestore and never call this. There is deliberately no GET handler (Next answers 405).
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Rate limiting
-    const rateLimitResponse = rateLimitPublic(request);
+    const rateLimitResponse = rateLimitAdmin(request);
     if (rateLimitResponse) return rateLimitResponse;
+
+    // Authentication check - require admin privileges
+    const authError = await requireAdmin(request);
+    if (authError) return authError;
 
     const API_KEY = process.env.YOUTUBE_API_KEY;
     if (!API_KEY) {

@@ -141,7 +141,7 @@ All backend functionality is exposed through Next.js API routes:
 |----------|--------|-------------|
 | `/api/ping` | GET | Health check endpoint |
 | `/api/queryNumu` | POST | Search content using Algolia |
-| `/api/getYTVideos` | GET | Sync YouTube videos (admin only) |
+| `/api/getYTVideos` | POST | Sync YouTube videos into Firestore (admin only; `Authorization: Bearer <ID token>`) |
 | `/api/userSubscribed` | GET | Register user email subscription |
 | `/api/newBlogPost` | POST | Webhook for new WordPress posts |
 | `/api/newStory` | POST | Publish new story (admin only) |
