@@ -40,3 +40,7 @@ cloudbuild.yaml, Dockerfile   production build and deploy (Cloud Build → Cloud
 - **Don't touch production data from dev, tests or previews.** `lib/firebase-admin.ts` uses `FIREBASE_PROJECT_ID`, else the build's `NEXT_PUBLIC_FIREBASE_PROJECT_ID`. CI, agent runs and previews build with `factory.yaml`'s `previewEnv`, which names the dev project `numu-know-dev`. Its content comes only from `seed/fixtures.mjs` (placeholder text, never copied from production); add fixtures there when a feature needs data. Analytics loads only in builds that name the production project (production and staging); Algolia search returns nothing and Klaviyo routes fail closed without their keys.
 - **Dependencies:** exact-ish via `package-lock.json`; adding one needs a one-line reason in the PR. Renovate opens grouped weekly updates.
 - **UI:** use Mantine components and the theme in `theme.ts`; keep pages working at mobile width (390px).
+
+## Previews
+
+Each PR into `main` by the owner or the factory bot gets `https://numu-know-web-pr-<n>.globalhost.ai` (behind Cloudflare Access, dev data from `numu-know-dev`) and a comment with desktop and mobile screenshots of `factory.yaml`'s `routes`. `globalhost-preview-build.yml` builds with no credentials; `globalhost-preview.yml` deploys from `main` only. Closing the PR tears the preview down.
