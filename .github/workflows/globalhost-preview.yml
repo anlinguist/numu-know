@@ -208,7 +208,8 @@ jobs:
           npx --no-install playwright install --with-deps chromium > /dev/null
           # Wait out the cold start (and the tag becoming routable), up to 3 minutes.
           for _ in $(seq 1 36); do
-            code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' -H "CF-Access-Client-Id: $id" -H "CF-Access-Client-Secret: $secret" "https://${host}/")"
+            # A cold start can outlast --max-time (curl exit 28); under `bash -e` that must not end the step.
+            code="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' -H "CF-Access-Client-Id: $id" -H "CF-Access-Client-Secret: $secret" "https://${host}/" || true)"
             [ "$code" = 200 ] && break
             sleep 5
           done
