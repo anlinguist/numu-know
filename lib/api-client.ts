@@ -218,11 +218,12 @@ export const apiClient = {
   },
 
   /**
-   * Get YouTube videos
+   * Sync YouTube videos into Firestore (admin only)
    */
   getYTVideos: async (): Promise<ApiResponse> => {
     return apiFetch('/api/getYTVideos', {
-      method: 'GET',
+      method: 'POST',
+      requiresAuth: true,
     });
   },
 };
