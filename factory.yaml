@@ -10,6 +10,11 @@ git:
   defaultBranch: main
   baseBranch: main
 
+# Prod is only named so previews can be refused if their config points at it (preview_config_names_prod).
+environments:
+  prod: { gcpProject: numu-know, region: us-central1 }
+  dev: { gcpProject: numu-know-dev, region: us-central1 }
+
 parts:
   web:
     path: .
@@ -25,7 +30,8 @@ parts:
         NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: numu-know-dev.firebasestorage.app
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "414694776649"
         NEXT_PUBLIC_FIREBASE_APP_ID: "1:414694776649:web:2c7de149ad418bb29f4498"
-    preview: { enabled: false }   # previews arrive with P1-11
+    # https://numu-know-web-pr-<n>.globalhost.ai per PR (.github/workflows/globalhost-preview.yml)
+    preview: { enabled: true }
 
 limits:
   maxConcurrentBuilders: 1
@@ -34,5 +40,5 @@ limits:
   dailyUsd: 20
 
 guardrails:
-  loadBearing: ["proxy.ts", "lib/firebase*", "cloudbuild.yaml", "Dockerfile", "firestore.rules", "seed/seed-dev.mjs"]
+  loadBearing: ["proxy.ts", "lib/firebase*", "cloudbuild.yaml", "Dockerfile", "firestore.rules", "seed/seed-dev.mjs", ".github/preview-tools/**"]
   immutable: []

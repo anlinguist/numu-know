@@ -1,0 +1,245 @@
+# globalhost previews (PLAN P1-11, ADR-0007/0016 in anlinguist/globalhost).
+# Each PR gets https://numu-know-web-pr-<n>.globalhost.ai behind Cloudflare Access: a tagged, no-traffic
+# revision of numu-know-web-preview in numu-know-dev (dev data only; nothing here can reach prod).
+#
+# - gate:   PRs from this repo by the owner or the factory bot, with previews enabled on main and main's
+#           previewEnv not naming the prod project. The WIF provider enforces the same actor rule, so a
+#           changed copy of this file in someone else's PR gets no credentials.
+# - build:  builds the PR's image with main's previewEnv. Runs PR code, holds no credentials.
+# - deploy: pushes and deploys that image, registers the host for Firebase Auth, screenshots main's routes
+#           through Access, comments on the PR. Runs no PR code.
+# - teardown (PR closed): removes the tag and the authorized domain.
+name: globalhost-preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions: {}
+
+concurrency:
+  group: globalhost-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+env:
+  DEV_PROJECT: numu-know-dev
+  REGION: us-central1
+  SERVICE: numu-know-web-preview
+  HOST_PREFIX: numu-know-web
+  ZONE: globalhost.ai
+  IMAGE_REPO: us-central1-docker.pkg.dev/numu-know-dev/previews/web
+  BUCKET: numu-know-dev-previews
+  DEPLOYER: preview-deployer@numu-know-dev.iam.gserviceaccount.com
+  PR: ${{ github.event.pull_request.number }}
+
+jobs:
+  gate:
+    name: gate
+    # Owner (anlinguist) or the factory App's bot; same-repo branches only.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(fromJSON('["47403803","350478808"]'), format('{0}', github.actor_id))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+      routes: ${{ steps.check.outputs.routes }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - id: check
+        name: Check main's factory.yaml allows previews
+        run: |
+          # Not `// true`: the alternative operator treats an explicit false as missing.
+          enabled="$(yq -r '.parts.web.preview.enabled' factory.yaml)"
+          [ "$enabled" = null ] && enabled=true
+          echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
+          if [ "$enabled" != "true" ]; then echo "::notice::previews are disabled in main's factory.yaml"; exit 0; fi
+          prod="$(yq -r '.environments.prod.gcpProject // ""' factory.yaml)"
+          dev="$(yq -r '.environments.dev.gcpProject // ""' factory.yaml)"
+          if [ -z "$prod" ] || [ "$dev" != "$DEV_PROJECT" ]; then
+            echo "::error::factory.yaml must declare environments.prod and environments.dev = $DEV_PROJECT"; exit 1
+          fi
+          # Whole-ID match, as `globalhost validate` does: numu-know-dev is fine, numu-know.firebaseapp.com is not.
+          if yq -o=json '.parts.web.config // {}' factory.yaml | jq -r '.. | strings' | grep -Eiq "(^|[^a-z0-9-])${prod}($|[^a-z0-9-])"; then
+            echo "::error::parts.web.config names the prod project ${prod}; previews refused"; exit 1
+          fi
+          routes="$(yq -r '.parts.web.config.routes // ["/"] | join(",")' factory.yaml)"
+          if ! [[ "$routes" =~ ^/[A-Za-z0-9/_,.~-]*$ ]]; then echo "::error::routes must be plain paths"; exit 1; fi
+          echo "routes=$routes" >> "$GITHUB_OUTPUT"
+          yq -o=json '.parts.web.config.previewEnv // {}' factory.yaml \
+            | jq -r 'to_entries[] | "\(.key)=\(.value|tostring)"' > preview.env
+          if grep -Ev '^NEXT_PUBLIC_[A-Z0-9_]+=[^[:space:]]*$' preview.env; then
+            echo "::error::previewEnv may only hold NEXT_PUBLIC_* names with single-line values"; exit 1
+          fi
+      - if: github.event.action != 'closed' && steps.check.outputs.enabled == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: preview-env
+          path: preview.env
+          retention-days: 1
+
+  build:
+    name: build (no credentials)
+    needs: gate
+    if: github.event.action != 'closed' && needs.gate.outputs.enabled == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: preview-env
+          path: ${{ runner.temp }}/env
+      - name: Build the image
+        run: |
+          args=()
+          while IFS= read -r line; do args+=(--build-arg "$line"); done < "$RUNNER_TEMP/env/preview.env"
+          docker build "${args[@]}" -t preview:local .
+          docker save preview:local | gzip -1 > "$RUNNER_TEMP/image.tar.gz"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: preview-image
+          path: ${{ runner.temp }}/image.tar.gz
+          retention-days: 1
+          compression-level: 0
+
+  deploy:
+    name: deploy, screenshot, comment
+    needs: [gate, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      id-token: write # WIF -> preview-deployer (numu-know-dev only)
+      pull-requests: write # the preview comment
+    env:
+      ROUTES: ${{ needs.gate.outputs.routes }}
+      SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: preview-image
+          path: ${{ runner.temp }}/image
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GLOBALHOST_PREVIEW_WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER }}
+          token_format: access_token
+      - name: Push
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          image="${IMAGE_REPO}:pr-${PR}-${SHA::12}"
+          docker load < "$RUNNER_TEMP/image/image.tar.gz"
+          docker tag preview:local "$image"
+          printf '%s' "$TOKEN" | docker login -u oauth2accesstoken --password-stdin "https://${IMAGE_REPO%%/*}"
+          docker push "$image"
+          docker logout "https://${IMAGE_REPO%%/*}"
+          echo "IMAGE=$(docker inspect --format '{{index .RepoDigests 0}}' "$image")" >> "$GITHUB_ENV"
+      - name: Deploy a tagged, no-traffic revision (app container only; the guard stays)
+        run: |
+          host="${HOST_PREFIX}-pr-${PR}.${ZONE}"
+          gcloud run deploy "$SERVICE" --project "$DEV_PROJECT" --region "$REGION" --quiet \
+            --container app --image "$IMAGE" \
+            --update-env-vars "FIREBASE_PROJECT_ID=${DEV_PROJECT},PUBLIC_ORIGIN=https://${host}" \
+            --tag "pr-${PR}" --no-traffic
+          echo "HOST=$host" >> "$GITHUB_ENV"
+      - name: Allow sign-in from the preview host (Firebase Auth, dev project)
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          api="https://identitytoolkit.googleapis.com/admin/v2/projects/${DEV_PROJECT}/config"
+          auth=(-H "Authorization: Bearer ${TOKEN}" -H "x-goog-user-project: ${DEV_PROJECT}")
+          domains="$(curl -fsS "${auth[@]}" "$api" | jq -c --arg h "$HOST" '.authorizedDomains + [$h] | unique')"
+          curl -fsS -X PATCH "${auth[@]}" -H "Content-Type: application/json" \
+            "${api}?updateMask=authorizedDomains" -d "{\"authorizedDomains\": ${domains}}" > /dev/null
+      # The screenshot tool comes from main (base.sha), not the PR: the factory bot can change files outside
+      # .github/workflows in its PRs, and this job holds credentials.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          sparse-checkout: .github/preview-tools
+          persist-credentials: false
+      - name: Screenshot main's routes through Access
+        working-directory: .github/preview-tools
+        run: |
+          id="$(gcloud secrets versions access latest --secret preview-access-client-id --project "$DEV_PROJECT")"
+          secret="$(gcloud secrets versions access latest --secret preview-access-client-secret --project "$DEV_PROJECT")"
+          echo "::add-mask::$secret"
+          export CF_ID="$id" CF_SECRET="$secret"
+          # Wait out the cold start (and the tag becoming routable), up to 3 minutes.
+          for _ in $(seq 1 36); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' -H "CF-Access-Client-Id: $CF_ID" -H "CF-Access-Client-Secret: $CF_SECRET" "https://${HOST}/")"
+            [ "$code" = 200 ] && break
+            sleep 5
+          done
+          npm ci --ignore-scripts --no-audit --no-fund > /dev/null
+          npx --no-install playwright install --with-deps chromium > /dev/null
+          HOST="$HOST" ROUTES="$ROUTES" node shoot.mjs > "$RUNNER_TEMP/results.json"
+          gcloud storage cp shots/*.png "gs://${BUCKET}/pr-${PR}/${SHA::12}/" --quiet || true
+      - name: Comment on the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          base="https://storage.googleapis.com/${BUCKET}/pr-${PR}/${SHA::12}"
+          {
+            echo "<!-- globalhost-preview -->"
+            echo "### Preview: https://${HOST}"
+            echo
+            echo "Behind Cloudflare Access (owner login). Commit \`${SHA::12}\`, dev data only."
+            echo
+            echo "| Route | Status | Desktop | Mobile |"
+            echo "|---|---|---|---|"
+            jq -r --arg b "$base" 'group_by(.route)[] | (map({(.vp): .}) | add) as $v |
+              "| `\($v.desktop.route)` | \($v.desktop.status) / \($v.mobile.status) | <img src=\"\($b)/\($v.desktop.file)\" width=\"360\"> | <img src=\"\($b)/\($v.mobile.file)\" width=\"160\"> |"' \
+              "$RUNNER_TEMP/results.json"
+          } > body.md
+          existing="$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
+            --jq '[.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- globalhost-preview -->")))][0].id // empty')"
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${REPO}/issues/comments/${existing}" -F body=@body.md > /dev/null
+          else
+            gh api -X POST "repos/${REPO}/issues/${PR}/comments" -F body=@body.md > /dev/null
+          fi
+
+  teardown:
+    name: teardown
+    needs: gate
+    if: github.event.action == 'closed' && needs.gate.outputs.enabled == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      id-token: write # WIF -> preview-deployer
+    steps:
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GLOBALHOST_PREVIEW_WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER }}
+          token_format: access_token
+      - name: Remove the tag
+        run: |
+          if gcloud run services describe "$SERVICE" --project "$DEV_PROJECT" --region "$REGION" \
+              --format='value(status.traffic[].tag)' | tr ';' '\n' | grep -qx "pr-${PR}"; then
+            gcloud run services update-traffic "$SERVICE" --project "$DEV_PROJECT" --region "$REGION" --quiet --remove-tags "pr-${PR}"
+          fi
+      - name: Remove the authorized domain
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          host="${HOST_PREFIX}-pr-${PR}.${ZONE}"
+          api="https://identitytoolkit.googleapis.com/admin/v2/projects/${DEV_PROJECT}/config"
+          auth=(-H "Authorization: Bearer ${TOKEN}" -H "x-goog-user-project: ${DEV_PROJECT}")
+          domains="$(curl -fsS "${auth[@]}" "$api" | jq -c --arg h "$host" '.authorizedDomains - [$h]')"
+          curl -fsS -X PATCH "${auth[@]}" -H "Content-Type: application/json" \
+            "${api}?updateMask=authorizedDomains" -d "{\"authorizedDomains\": ${domains}}" > /dev/null

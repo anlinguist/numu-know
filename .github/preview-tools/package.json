@@ -1,0 +1,9 @@
+{
+  "name": "globalhost-preview-tools",
+  "private": true,
+  "description": "Screenshot tool for .github/workflows/globalhost-preview.yml. Read from main only, never from the PR.",
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.64.1"
+  }
+}
