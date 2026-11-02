@@ -36,7 +36,7 @@ jobs:
         with:
           workload_identity_provider: ${{ vars.GLOBALHOST_RELEASE_WIF_PROVIDER }}
           service_account: ${{ vars.GLOBALHOST_RELEASE_SA }}
-      - uses: anlinguist/globalhost/packages/action@36d7b93ecb3f5c625eea6243c1f5ff570524a6e0 # globalhost main (P1-12)
+      - uses: anlinguist/globalhost/packages/action@caf9a78a387cf103643770b95d63af7aaf3a659c # globalhost main (deploy links by project ID)
         with:
           step: observe
         env:
