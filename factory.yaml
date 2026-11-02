@@ -32,6 +32,10 @@ parts:
         NEXT_PUBLIC_FIREBASE_APP_ID: "1:414694776649:web:2c7de149ad418bb29f4498"
     # https://numu-know-web-pr-<n>.globalhost.ai per PR (.github/workflows/globalhost-preview.yml)
     preview: { enabled: true }
+    # Prod still deploys through the existing Cloud Build trigger; globalhost only watches it (globalhost-release.yml).
+    release:
+      - adapter: cloud-build-trigger
+        config: { project: numu-know, trigger: rmgpgab-numu-know-us-central1-anlinguist-Numu-Know--mafyn, region: global }
 
 limits:
   maxConcurrentBuilders: 1
