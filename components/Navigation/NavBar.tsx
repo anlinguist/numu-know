@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { auth, logout, fbfsdb } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import default_photo from '@/assets/def_prof_pic.jpeg';
@@ -22,6 +22,10 @@ import { updateUserPreferences } from '@/app/actions/story-actions';
 import { showError } from '@/lib/notifications';
 
 import classes from './Navigation.module.css';
+
+// Nothing to subscribe to: this only tells the server render and hydration (false)
+// apart from client renders after hydration (true).
+const subscribeToNothing = () => () => {};
 
 interface NavBarProps {
     openLoginModal: () => void;
@@ -64,8 +68,10 @@ function NavBar({ openLoginModal }: NavBarProps) {
         }
     }, [user]);
 
-    // The avatar menu is derived from the auth state; nothing renders until auth has resolved.
-    const userMenu = loading ? null : user ? (
+    // The avatar menu is derived from the auth state. It renders only after hydration, so the
+    // first client render matches the server's, and only once auth has resolved.
+    const hydrated = useSyncExternalStore(subscribeToNothing, () => true, () => false);
+    const userMenu = !hydrated || loading ? null : user ? (
         <Menu shadow="md" width={200}>
             <Menu.Target>
                 <Avatar src={user.photoURL ? user.photoURL : default_photo.src} alt="user" radius="xl" style={{ cursor: 'pointer' }} />
