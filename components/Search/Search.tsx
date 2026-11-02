@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { IoMdClose, IoIosSearch } from 'react-icons/io';
 import { Loader, TextInput, Modal } from '@mantine/core';
 import { MAX_SEARCH_QUERY_LENGTH } from '@/lib/constants';
@@ -94,8 +94,16 @@ function Search(props: SearchProps) {
         setSearchLoader('');
     }
 
+    // Every search takes a new number; only the latest one may set state, so a slow
+    // earlier search can't overwrite newer results.
+    const latestSearch = useRef(0)
+
     const queryNumu = async (query: string | undefined): Promise<void> => {
-        applySearchOutcome(await searchNumu(query));
+        const request = ++latestSearch.current;
+        const outcome = await searchNumu(query);
+        if (request === latestSearch.current) {
+            applySearchOutcome(outcome);
+        }
     }
 
     const newSearch = (e: React.FormEvent): void => {
@@ -120,7 +128,12 @@ function Search(props: SearchProps) {
     // ...and run that search. The request is the effect; its state updates happen once it settles.
     useEffect(() => {
         if (props.opened && props.searchTerm) {
-            searchNumu(props.searchTerm).then(applySearchOutcome);
+            const request = ++latestSearch.current;
+            searchNumu(props.searchTerm).then((outcome) => {
+                if (request === latestSearch.current) {
+                    applySearchOutcome(outcome);
+                }
+            });
         }
     }, [props.searchTerm, props.opened])
 
