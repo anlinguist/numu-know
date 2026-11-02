@@ -67,3 +67,23 @@ test('firestore.rules lets clients read their user document but not write it', (
   assert.match(block, /allow read: if request\.auth\.uid == uid;/);
   assert.ok(!/allow[^:;]*\b(write|update|create|delete)\b/.test(block), `users/{uid} must not allow client writes:\n${block}`);
 });
+
+test('NavBar ignores toggles while that preference is saving', () => {
+  const src = read('components/Navigation/NavBar.tsx');
+  const fn = src.slice(src.indexOf('const savePreference'), src.indexOf('const toggleBlogs'));
+  assert.match(fn, /if \(savingRef\.current\[key\]\) return;/, 'a second toggle for the same key is ignored');
+  assert.match(fn, /finally \{[\s\S]*savingRef\.current\[key\] = false;[\s\S]*setSaving\(/, 'the guard is released after the save settles');
+  assert.equal((src.match(/disabled=\{saving\.(newBlogPosts|newStories)\}/g) ?? []).length, 2, 'both checkboxes are disabled while saving');
+});
+
+test('NavBar shows the save error when getting the ID token fails', () => {
+  const src = read('components/Navigation/NavBar.tsx');
+  const fn = src.slice(src.indexOf('const savePreference'), src.indexOf('const toggleBlogs'));
+  assert.match(fn, /getIdToken\(\)\.catch\(\(\) => null\)/, 'a throwing getIdToken is caught');
+  assert.ok(!/if \(!token\) return;/.test(fn), 'a missing token does not fail silently');
+  assert.match(fn, /if \(!token\) \{[\s\S]*?showError\(\{ message: 'Could not save your notification settings' \}\)/);
+});
+
+test('CLAUDE.md explains why updateUserPreferences skips the admin claim', () => {
+  assert.match(read('CLAUDE.md'), /`updateUserPreferences` checks the user's token but not the admin claim, on purpose/);
+});
