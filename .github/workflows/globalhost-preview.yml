@@ -161,16 +161,19 @@ jobs:
             "${api}?updateMask=authorizedDomains" -d "{\"authorizedDomains\": ${domains}}" > /dev/null
 
   screenshots:
-    name: screenshots, comment
+    name: screenshots
     needs: [resolve, deploy]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    # A browser runs PR code here, so this job's identity can only read the Access CI token and write screenshots.
+    # A browser runs PR code here, so this job's identity can only read the Access CI token and write screenshots,
+    # and it holds no GitHub write token (the comment is posted by the next job).
     environment: preview-screenshots
+    concurrency:
+      group: globalhost-preview-shots-${{ needs.resolve.outputs.pr }}
+      cancel-in-progress: false
     permissions:
       contents: read # main's .github/preview-tools
       id-token: write # WIF -> preview-screenshots (numu-know-dev only)
-      pull-requests: write # the preview comment
     env:
       PR: ${{ needs.resolve.outputs.pr }}
       SHA: ${{ needs.resolve.outputs.sha }}
@@ -183,12 +186,17 @@ jobs:
           path: tools
           sparse-checkout: .github/preview-tools
           persist-credentials: false
-      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ vars.GLOBALHOST_PREVIEW_WIF_PROVIDER }}
           service_account: ${{ env.SCREENSHOTTER }}
+          token_format: access_token
       - name: Screenshot main's routes through Access
         working-directory: tools/.github/preview-tools
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+          CREDS: ${{ steps.auth.outputs.credentials_file_path }}
         run: |
           host="${HOST_PREFIX}-pr-${PR}.${ZONE}"
           id="$(gcloud secrets versions access latest --secret preview-access-client-id --project "$DEV_PROJECT")"
@@ -202,10 +210,37 @@ jobs:
             [ "$code" = 200 ] && break
             sleep 5
           done
-          # The browser gets a clean environment: no OIDC request token, no cloud credentials.
+          # The browser gets a clean environment and no credentials file; the upload uses the short-lived access
+          # token minted before it ran.
+          rm -f "$CREDS"
           env -i PATH="$PATH" HOME="$HOME" HOST="$host" ROUTES="$ROUTES" CF_ID="$id" CF_SECRET="$secret" \
             node shoot.mjs > "$RUNNER_TEMP/results.json"
-          gcloud storage cp shots/*.png "gs://${BUCKET}/pr-${PR}/${SHA::12}/" --quiet || true
+          for f in shots/*.png; do
+            [ -e "$f" ] || continue
+            curl -fsS -X POST -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: image/png" --data-binary "@$f" \
+              "https://storage.googleapis.com/upload/storage/v1/b/${BUCKET}/o?uploadType=media&name=pr-${PR}/${SHA::12}/$(basename "$f")" > /dev/null || true
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: preview-results
+          path: ${{ runner.temp }}/results.json
+          retention-days: 1
+
+  comment:
+    name: comment
+    needs: [resolve, screenshots]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write # the preview comment
+    env:
+      PR: ${{ needs.resolve.outputs.pr }}
+      SHA: ${{ needs.resolve.outputs.sha }}
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: preview-results
+          path: ${{ runner.temp }}
       - name: Comment on the PR
         env:
           GH_TOKEN: ${{ github.token }}
