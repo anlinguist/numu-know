@@ -17,7 +17,9 @@ import {
     Drawer
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { doc, getDoc, deleteField, updateDoc } from '@firebase/firestore';
+import { doc, getDoc } from '@firebase/firestore';
+import { updateUserPreferences } from '@/app/actions/story-actions';
+import { showError } from '@/lib/notifications';
 
 import classes from './Navigation.module.css';
 
@@ -103,35 +105,24 @@ function NavBar({ openLoginModal }: NavBarProps) {
         }
     }, [user, loading, openLoginModal, open]);
 
-    const toggleBlogs = async () => {
-        if (!user?.uid) return;
-        if (optedIntoBlogPosts) {
-            await updateDoc(doc(fbfsdb, `users/${user.uid}`), {
-                newBlogPosts: deleteField()
-            })
-            setOptedIntoBlogPosts(false);
-        } else {
-            await updateDoc(doc(fbfsdb, `users/${user.uid}`), {
-                newBlogPosts: true
-            })
-            setOptedIntoBlogPosts(true);
+    const savePreference = async (
+        key: 'newStories' | 'newBlogPosts',
+        value: boolean,
+        setOptedIn: (optedIn: boolean) => void
+    ) => {
+        const token = await user?.getIdToken();
+        if (!token) return;
+        setOptedIn(value);
+        const result = await updateUserPreferences(token, { [key]: value }).catch(() => null);
+        if (!result?.success) {
+            setOptedIn(!value);
+            showError({ message: 'Could not save your notification settings' });
         }
     }
 
-    const toggleStories = async () => {
-        if (!user?.uid) return;
-        if (optedIntoStories) {
-            setOptedIntoStories(false);
-            await updateDoc(doc(fbfsdb, `users/${user.uid}`), {
-                newStories: deleteField()
-            })
-        } else {
-            setOptedIntoStories(true);
-            await updateDoc(doc(fbfsdb, `users/${user.uid}`), {
-                newStories: true
-            })
-        }
-    }
+    const toggleBlogs = () => savePreference('newBlogPosts', !optedIntoBlogPosts, setOptedIntoBlogPosts);
+
+    const toggleStories = () => savePreference('newStories', !optedIntoStories, setOptedIntoStories);
 
     return (
         <div className={classes.navbar}>

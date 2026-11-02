@@ -10,12 +10,8 @@ service cloud.firestore {
     }
     match /users/{uid} {
     	allow read: if request.auth.uid == uid;
-      allow update: if request.auth.uid == uid && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['admin']));
-      allow write: if request.auth.uid == uid && !isModifyingPermissions();
-      
-      function isModifyingPermissions(){
-        return request.resource.data.keys().hasAny(["admin"]);
-      }
+      // No client writes: notification preferences go through the
+      // updateUserPreferences server action (Admin SDK), which validates them.
     }
     match /allDocuments/drafts {
       allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true
