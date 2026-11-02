@@ -1,6 +1,7 @@
 // node --test: the YouTube sync is an admin-only action and pages read videos from Firestore (issue #31).
-// The route handler is loaded for real; '@/lib/firebase-admin' is replaced with an in-memory fake and the
-// YouTube Data API with a stubbed fetch, so nothing here reaches Firebase or Google.
+// The route handler is loaded for real, compiled with the TypeScript devDependency so this runs on Node 20
+// (CI, Dockerfile). '@/lib/firebase-admin' is replaced with an in-memory fake and the YouTube Data API with a
+// stubbed fetch, so nothing here reaches Firebase or Google.
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { register } from 'node:module';
@@ -13,9 +14,11 @@ const read = (file) => readFileSync(join(root, file), 'utf8');
 
 // Resolve the '@/…' alias and extensionless TypeScript imports, and stub firebase-admin.
 const hooks = `
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 const root = ${JSON.stringify(pathToFileURL(root).href)};
+const ts = createRequire(root)('typescript');
 const withTs = (url) => {
   if (/\\.[cm]?[jt]sx?$/.test(url)) return url;
   for (const ext of ['.ts', '.tsx', '/index.ts']) if (existsSync(fileURLToPath(url + ext))) return url + ext;
@@ -37,6 +40,14 @@ export async function load(url, context, next) {
       shortCircuit: true,
       source: 'export const getDb = () => globalThis.__fakeAdmin.db; export const getAdminAuth = () => globalThis.__fakeAdmin.auth;',
     };
+  }
+  if (url.startsWith(root) && url.endsWith('.ts')) {
+    // Node 20 (CI, Dockerfile) can't load .ts, so compile it with the repo's own TypeScript devDependency.
+    const { outputText } = ts.transpileModule(readFileSync(fileURLToPath(url), 'utf8'), {
+      fileName: fileURLToPath(url),
+      compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, verbatimModuleSyntax: false },
+    });
+    return { format: 'module', shortCircuit: true, source: outputText };
   }
   return next(url, context);
 }
