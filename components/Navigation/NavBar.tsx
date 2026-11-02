@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { auth, logout, fbfsdb } from "@/lib/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import default_photo from '@/assets/def_prof_pic.jpeg';
@@ -35,6 +35,9 @@ function NavBar({ openLoginModal }: NavBarProps) {
 
     const [optedIntoBlogPosts, setOptedIntoBlogPosts] = useState(false);
     const [optedIntoStories, setOptedIntoStories] = useState(false);
+    // One save per preference at a time, so the checkbox can't drift from what was saved.
+    const [saving, setSaving] = useState({ newStories: false, newBlogPosts: false });
+    const savingRef = useRef({ newStories: false, newBlogPosts: false });
     const pathname = usePathname();
 
     useEffect(() => {
@@ -110,13 +113,24 @@ function NavBar({ openLoginModal }: NavBarProps) {
         value: boolean,
         setOptedIn: (optedIn: boolean) => void
     ) => {
-        const token = await user?.getIdToken();
-        if (!token) return;
-        setOptedIn(value);
-        const result = await updateUserPreferences(token, { [key]: value }).catch(() => null);
-        if (!result?.success) {
-            setOptedIn(!value);
-            showError({ message: 'Could not save your notification settings' });
+        if (savingRef.current[key]) return;
+        savingRef.current[key] = true;
+        setSaving((prev) => ({ ...prev, [key]: true }));
+        try {
+            const token = await user?.getIdToken().catch(() => null);
+            if (!token) {
+                showError({ message: 'Could not save your notification settings' });
+                return;
+            }
+            setOptedIn(value);
+            const result = await updateUserPreferences(token, { [key]: value }).catch(() => null);
+            if (!result?.success) {
+                setOptedIn(!value);
+                showError({ message: 'Could not save your notification settings' });
+            }
+        } finally {
+            savingRef.current[key] = false;
+            setSaving((prev) => ({ ...prev, [key]: false }));
         }
     }
 
@@ -157,6 +171,7 @@ function NavBar({ openLoginModal }: NavBarProps) {
                         label="Get updated about new blog posts"
                         checked={optedIntoBlogPosts}
                         onChange={toggleBlogs}
+                        disabled={saving.newBlogPosts}
                         color="dark"
                         size="md"
                     />
@@ -164,6 +179,7 @@ function NavBar({ openLoginModal }: NavBarProps) {
                         label="Get updated about new interlinear stories"
                         checked={optedIntoStories}
                         onChange={toggleStories}
+                        disabled={saving.newStories}
                         color="dark"
                         size="md"
                     />
