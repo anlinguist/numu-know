@@ -48,6 +48,8 @@ export function proxy(request: NextRequest) {
         "font-src 'self' data:",
         "img-src 'self' blob: data: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://*.google.com https://*.gstatic.com https://i.ytimg.com",
         `connect-src 'self' https://firebasestorage.googleapis.com https://firestore.googleapis.com https://*.googleapis.com https://www.google-analytics.com https://analytics.google.com https://public-api.wordpress.com`,
+        // Story audio (the <audio> element; without this it falls back to default-src and is blocked).
+        "media-src 'self' https://firebasestorage.googleapis.com",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",
@@ -60,6 +62,8 @@ export function proxy(request: NextRequest) {
         "font-src 'self' data:",
         "img-src 'self' blob: data: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://*.google.com https://*.gstatic.com https://i.ytimg.com",
         `connect-src 'self' https://firebasestorage.googleapis.com https://firestore.googleapis.com https://*.googleapis.com https://www.google-analytics.com https://analytics.google.com https://public-api.wordpress.com`,
+        // Story audio (the <audio> element; without this it falls back to default-src and is blocked).
+        "media-src 'self' https://firebasestorage.googleapis.com",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",

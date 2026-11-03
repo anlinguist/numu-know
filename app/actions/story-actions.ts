@@ -9,6 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { DEFAULT_STORY_AUTHOR, DEFAULT_STORY_VARIANT } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { provisionUser, type ProvisionResult } from '@/lib/user-provisioning';
+import { storyAudioBucket, storyAudioPath, storyAudioUrl } from '@/lib/story-audio';
 import type { StoryContent, Word } from '@/types/story';
 
 interface ActionResult<T = unknown> {
@@ -48,26 +49,16 @@ async function verifyUser(token: string): Promise<{ uid: string; isAdmin: boolea
  */
 export async function getStoryAudioUrl(storyTitle: string): Promise<ActionResult<string | null>> {
   try {
-    const bucket = getAdminStorage().bucket('numu-know.appspot.com'); // Or get default bucket
-    // Note: The bucket name might need to be explicitly configured or retrieved from environment if not default.
-    // Based on client usage: ref(storage, `stories/${chosenDoc}/${chosenDoc}.wav`)
-    // The bucket name is usually default. If initializeApp is called without storageBucket, we might need to specify it.
-    // Assuming default bucket for now.
+    // The build's own bucket (numu-know-dev for CI, agent runs and previews), never a hardcoded project.
+    const bucketName = storyAudioBucket({
+      FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET,
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    });
+    if (!bucketName) {
+      return { success: true, data: null };
+    }
 
-    // Actually, getAdminStorage().bucket() with no args uses default if options provided, but our init doesn't provide storageBucket.
-    // We should explicitly use the one implied by the project.
-    // The bucket is typically `${projectId}.appspot.com` or custom.
-    // Let's assume standard convention 'numu-know.appspot.com' or check env.
-
-    // Better: check if the file exists first.
-    // path: stories/${storyTitle}/${storyTitle}.wav
-
-    // Wait, getDownloadURL on client provides a public long-lived URL if not protected rules.
-    // Server side, getSignedUrl is common.
-    // Or if public, we can just construct it.
-    // But signedUrl is safer if we want to ensure existence.
-
-    const file = bucket.file(`stories/${storyTitle}/${storyTitle}.wav`);
+    const file = getAdminStorage().bucket(bucketName).file(storyAudioPath(storyTitle));
 
     // Check existence first
     const [exists] = await file.exists();
@@ -75,11 +66,8 @@ export async function getStoryAudioUrl(storyTitle: string): Promise<ActionResult
       return { success: true, data: null };
     }
 
-    // Construct public Download URL
-    // Format: https://firebasestorage.googleapis.com/v0/b/[bucket]/o/[path]?alt=media
-    // Path must be URL encoded.
-    const encodedPath = encodeURIComponent(`stories/${storyTitle}/${storyTitle}.wav`);
-    const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media`;
+    // Public download URL (needs storage rules that allow reading stories/**)
+    const publicUrl = storyAudioUrl(bucketName, storyTitle);
 
     return { success: true, data: publicUrl };
   } catch (error) {
