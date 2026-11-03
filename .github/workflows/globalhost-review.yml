@@ -42,17 +42,40 @@ jobs:
       timeout: ${{ steps.gate.outputs.timeout }}
     steps:
       - id: gate
-        uses: anlinguist/globalhost/packages/action@7a2ea927d9b9a57286af9a47cfad919725fe7468 # globalhost main (#55, #56)
+        uses: anlinguist/globalhost/packages/action@96f3ed3bce9e681ba9b0827c0b5b39a384cfe67f # globalhost main (#58 deploy verification)
         with:
           step: review-gate
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GLOBALHOST_APP_SLUG: ${{ vars.GLOBALHOST_APP_SLUG }}
 
+  unlabel:
+    needs: gate
+    # Removes an owner's factory:review that won't be acted on (e.g. CI hasn't succeeded on the head), so it can be
+    # re-applied. Its own job, outside the review environment and the per-PR concurrency group, so it never displaces
+    # a review waiting in that group. Its token can only write pull requests; it runs no factory or PR code.
+    if: needs.gate.outputs.action == 'unlabel'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write # remove the label
+    steps:
+      - name: Remove factory:review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ needs.gate.outputs.pr }}
+        run: |
+          [[ "$PR" =~ ^[1-9][0-9]{0,9}$ ]] || { echo "not a PR number" >&2; exit 1; }
+          if ! out=$(gh api --method DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/factory:review" 2>&1 >/dev/null); then
+            case "$out" in
+              *"HTTP 404"*) echo "factory:review is already gone from #$PR" ;;
+              *) echo "$out" >&2; exit 1 ;;
+            esac
+          fi
+
   review:
     needs: gate
-    # `unlabel` runs only to remove an owner's factory:review that won't be acted on, so it can be re-applied.
-    if: needs.gate.outputs.action == 'review' || needs.gate.outputs.action == 'unlabel'
+    if: needs.gate.outputs.action == 'review'
     runs-on: ubuntu-24.04
     # limits.perRunMinutes (≤ 180), so a live review is never taken over as stale (takeover is perRunMinutes + 30).
     timeout-minutes: ${{ fromJSON(needs.gate.outputs.timeout) }}
@@ -79,7 +102,7 @@ jobs:
         with:
           workload_identity_provider: ${{ vars.GLOBALHOST_REVIEW_WIF_PROVIDER }}
           service_account: ${{ vars.GLOBALHOST_REVIEW_SA }}
-      - uses: anlinguist/globalhost/packages/action@7a2ea927d9b9a57286af9a47cfad919725fe7468 # globalhost main (#55, #56)
+      - uses: anlinguist/globalhost/packages/action@96f3ed3bce9e681ba9b0827c0b5b39a384cfe67f # globalhost main (#58 deploy verification)
         with:
           step: review
         env:
