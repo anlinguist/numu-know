@@ -36,7 +36,7 @@ jobs:
         with:
           workload_identity_provider: ${{ vars.GLOBALHOST_RELEASE_WIF_PROVIDER }}
           service_account: ${{ vars.GLOBALHOST_RELEASE_SA }}
-      - uses: anlinguist/globalhost/packages/action@c5fef84fdf3dbf472526ef3615648ea352734640 # globalhost main (#54)
+      - uses: anlinguist/globalhost/packages/action@7a2ea927d9b9a57286af9a47cfad919725fe7468 # globalhost main (#55, #56)
         with:
           step: observe
         env:
