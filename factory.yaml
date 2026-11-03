@@ -39,8 +39,9 @@ parts:
           project: numu-know
           trigger: rmgpgab-numu-know-us-central1-anlinguist-Numu-Know--mafyn
           region: global
-          # The Cloud Run service www.numu-know.com serves; the observer checks it runs the merged commit.
-          cloudRun: { service: numu-know, region: us-central1 }
+          # The Cloud Run service www.numu-know.com and numu-know.com map to (named staging-numu-know for
+          # historical reasons). The observer checks it runs the merged commit before posting ✅.
+          cloudRun: { service: staging-numu-know, region: us-central1 }
 
 limits:
   maxConcurrentBuilders: 1
