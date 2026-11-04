@@ -8,12 +8,30 @@ function generateNonce(): string {
   return Buffer.from(crypto.randomUUID()).toString('base64');
 }
 
+// The only canonical host (issue #50). The apex redirects here; the target is fixed, never taken from the request.
+const APEX_HOST = 'numu-know.com';
+const CANONICAL_ORIGIN = 'https://www.numu-know.com';
+
 /**
  * Proxy handler to add nonce and security headers to response
  * Generates a unique nonce for each request to enable inline styles/scripts
  * without using 'unsafe-inline'
  */
 export function proxy(request: NextRequest) {
+  // Redirect the apex to www before anything else, API routes included. Cloud Run domain mappings pass the
+  // original Host header through; strip any port and trailing dot before comparing.
+  const host = (request.headers.get('host') ?? '').toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '');
+  if (host === APEX_HOST) {
+    const { pathname, search } = request.nextUrl;
+    // Concatenate rather than new URL(path, base): a path like '//evil.example' would otherwise replace the host.
+    return NextResponse.redirect(`${CANONICAL_ORIGIN}${pathname}${search}`, 308);
+  }
+
+  // API routes only reach the proxy for the apex redirect above (see the matcher); leave them as they were.
+  if (request.nextUrl.pathname === '/api' || request.nextUrl.pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
   // Generate a unique nonce for this request
   const nonce = generateNonce();
 
@@ -84,7 +102,7 @@ export function proxy(request: NextRequest) {
 
 /**
  * Configure which routes this proxy applies to
- * Apply to all routes except API routes and static files
+ * Apply to all routes except API routes and static files, plus everything on the apex host (redirected to www)
  */
 export const config = {
   matcher: [
@@ -101,6 +119,11 @@ export const config = {
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },
       ],
+    },
+    // Every request to the apex host, API routes and prefetches included, so it can be redirected to www.
+    {
+      source: '/:path*',
+      has: [{ type: 'host', value: 'numu-know.com' }],
     },
   ],
 };
