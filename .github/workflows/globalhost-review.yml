@@ -42,7 +42,7 @@ jobs:
       timeout: ${{ steps.gate.outputs.timeout }}
     steps:
       - id: gate
-        uses: anlinguist/globalhost/packages/action@926953cfa52ca16caf915a1c54339de74f90659c # globalhost main (#58 deploy verification)
+        uses: anlinguist/globalhost/packages/action@7dfe2b792dc3bfd7d1889ad2a3b8e64b497f83cf # globalhost main (#67 protected paths)
         with:
           step: review-gate
         env:
@@ -102,7 +102,7 @@ jobs:
         with:
           workload_identity_provider: ${{ vars.GLOBALHOST_REVIEW_WIF_PROVIDER }}
           service_account: ${{ vars.GLOBALHOST_REVIEW_SA }}
-      - uses: anlinguist/globalhost/packages/action@926953cfa52ca16caf915a1c54339de74f90659c # globalhost main (#58 deploy verification)
+      - uses: anlinguist/globalhost/packages/action@7dfe2b792dc3bfd7d1889ad2a3b8e64b497f83cf # globalhost main (#67 protected paths)
         with:
           step: review
         env:
